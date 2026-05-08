@@ -107,10 +107,59 @@ function applyFiscalPartnerDefaults() {
   }
 }
 
+function applyTheme(theme) {
+  document.body.classList.toggle("dark", theme === "dark");
+  const toggle = document.getElementById("themeToggle");
+  if (toggle) toggle.checked = theme === "dark";
+  try { localStorage.setItem("calculatorTheme", theme); } catch (_) {}
+}
+
+function initTheme() {
+  let stored = "light";
+  try { stored = localStorage.getItem("calculatorTheme") || "light"; } catch (_) {}
+  applyTheme(stored);
+  const toggle = document.getElementById("themeToggle");
+  if (toggle) {
+    toggle.addEventListener("change", () => {
+      applyTheme(toggle.checked ? "dark" : "light");
+    });
+  }
+}
+
+function clearTableHighlights(table) {
+  table.querySelectorAll(".col-hover,.cell-hover,.header-hover").forEach(el => {
+    el.classList.remove("col-hover", "cell-hover", "header-hover");
+  });
+}
+
+function setupTableHeaderHover() {
+  document.querySelectorAll("table").forEach(table => {
+    table.addEventListener("mouseover", event => {
+      const th = event.target.closest("th");
+      if (!th || !table.contains(th)) return;
+
+      clearTableHighlights(table);
+
+      const cellIndex = th.cellIndex;
+      th.classList.add("header-hover");
+
+      Array.from(table.rows).forEach(row => {
+        const cell = row.cells[cellIndex];
+        if (cell) cell.classList.add("col-hover");
+      });
+    });
+
+    table.addEventListener("mouseout", event => {
+      const leavingTable = !event.relatedTarget || !table.contains(event.relatedTarget);
+      if (leavingTable) clearTableHighlights(table);
+    });
+  });
+}
+
 function setupTabs(){document.querySelectorAll(".tab-button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab-button").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab-panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active")});document.querySelectorAll(".detail-tab-button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".detail-tab-button").forEach(x=>x.classList.remove("active"));b.classList.add("active");activeDetailScenario=b.dataset.detail;if(window.__lastResult)renderDetails(window.__lastResult)})}
-function init(){addRateRow({effectiveFrom:"2025-08-25",euribor:2.08});addRateRow({effectiveFrom:"2026-01-01",euribor:2.12});addEtfContributionRow({amount:10000,frequency:"Yearly",month:1,startYear:2026,endYear:2028});addEtfContributionRow({amount:16500,frequency:"Yearly",month:1,startYear:2029,endYear:2045});addLumpContributionRow({amount:0,year:2026,month:1,destination:"LT repayment",description:"optional"});document.querySelectorAll("input,select").forEach(el=>{el.addEventListener("input",calculate);el.addEventListener("change",calculate)});
+function init(){initTheme();addRateRow({effectiveFrom:"2025-08-25",euribor:2.08});addRateRow({effectiveFrom:"2026-01-01",euribor:2.12});addEtfContributionRow({amount:10000,frequency:"Yearly",month:1,startYear:2026,endYear:2028});addEtfContributionRow({amount:16500,frequency:"Yearly",month:1,startYear:2029,endYear:2045});addLumpContributionRow({amount:0,year:2026,month:1,destination:"LT repayment",description:"optional"});document.querySelectorAll("input,select").forEach(el=>{el.addEventListener("input",calculate);el.addEventListener("change",calculate)});
 const fiscalPartnerEl=document.getElementById("hasFiscalPartner");
 if(fiscalPartnerEl){
   fiscalPartnerEl.addEventListener("change",()=>{applyFiscalPartnerDefaults();calculate();});
-}document.getElementById("addRateRow").onclick=()=>{addRateRow();calculate()};document.getElementById("addEtfContribution").onclick=()=>{addEtfContributionRow();calculate()};document.getElementById("addLumpContribution").onclick=()=>{addLumpContributionRow();calculate()};document.getElementById("downloadCsv").onclick=downloadCsv;window.addEventListener("resize",()=>{if(window.__lastResult)renderChart(window.__lastResult)});setupTabs();renderChartControls();applyFiscalPartnerDefaults();calculate()}
+}document.getElementById("addRateRow").onclick=()=>{addRateRow();calculate()};document.getElementById("addEtfContribution").onclick=()=>{addEtfContributionRow();calculate()};document.getElementById("addLumpContribution").onclick=()=>{addLumpContributionRow();calculate()};document.getElementById("downloadCsv").onclick=downloadCsv;window.addEventListener("resize",()=>{if(window.__lastResult)renderChart(window.__lastResult)});setupTabs();renderChartControls();setupTableHeaderHover();applyFiscalPartnerDefaults();calculate()}
 init();

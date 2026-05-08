@@ -73,3 +73,13 @@ Updated default assumptions:
 - Amsterdam purchase costs: EUR 25,000
 - Rent avoided: EUR 2,300/month
 - NL annual inflation: 3.3%
+
+
+## v6 changes
+
+Added:
+- Light / dark theme switch with localStorage persistence.
+- Table header hover highlighting:
+  - hover a header to lightly highlight that column;
+  - hover a row to lightly highlight the row;
+  - intersection cell receives stronger highlight.
