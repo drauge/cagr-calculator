@@ -54,6 +54,24 @@ function addMonthsToDateString(dateString, months) {
   return d.toISOString().slice(0, 10);
 }
 
+function monthlyDateByPaymentDay(anchorDateString, monthOffset, paymentDay) {
+  const anchor = dateStringToUtc(anchorDateString);
+  const target = new Date(Date.UTC(
+    anchor.getUTCFullYear(),
+    anchor.getUTCMonth() + monthOffset,
+    1
+  ));
+
+  const lastDayOfMonth = new Date(Date.UTC(
+    target.getUTCFullYear(),
+    target.getUTCMonth() + 1,
+    0
+  )).getUTCDate();
+
+  target.setUTCDate(Math.min(paymentDay, lastDayOfMonth));
+  return target.toISOString().slice(0, 10);
+}
+
 function daysBetween(startDateString, endDateString) {
   const start = dateStringToUtc(startDateString);
   const end = dateStringToUtc(endDateString);
