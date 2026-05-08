@@ -59,3 +59,17 @@ If enabled, the model uses 2025 joint Box 3 limits:
 - debt threshold: EUR 7,600
 
 The model allocates the combined Box 3 allowance fully to the user's side, as requested.
+
+
+## v5 changes
+
+Fiscal partner dropdown now updates the visible input fields:
+- No: allowance EUR 57,684, debt threshold EUR 3,800
+- Yes: allowance EUR 115,368, debt threshold EUR 7,600
+
+Updated default assumptions:
+- LT annual appreciation: 3.6%
+- LT annual inflation: 3.44%
+- Amsterdam purchase costs: EUR 25,000
+- Rent avoided: EUR 2,300/month
+- NL annual inflation: 3.3%

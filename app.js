@@ -92,6 +92,25 @@ function renderChart(res){const svg=document.getElementById("chart");svg.innerHT
 function render(res){renderSummary(res);renderDetails(res);renderChart(res)}
 function calculate(){try{const res=simulateAll();window.__lastResult=res;render(res)}catch(e){console.error(e)}}
 function downloadCsv(){const res=window.__lastResult||simulateAll(),rows=[["Scenario","Year","ETF","LT value","LT debt","LT equity","AMS value","AMS debt","AMS equity","Total net worth","Real net worth","Box 3 tax","Events"]];Object.values(res.scenarios).forEach(s=>s.rows.forEach(r=>rows.push([s.label,r.year,r.etf.toFixed(2),r.ltMarketValue.toFixed(2),r.ltDebt.toFixed(2),r.ltEquity.toFixed(2),r.amsValue.toFixed(2),r.amsDebt.toFixed(2),r.amsEquity.toFixed(2),r.totalNetWorth.toFixed(2),r.realNetWorth.toFixed(2),r.box3Tax.toFixed(2),r.events])));const csv=rows.map(row=>row.map(x=>`"${String(x).replaceAll('"','""')}"`).join(",")).join("\n"),blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="scenario_comparison.csv";a.click();URL.revokeObjectURL(url)}
+function applyFiscalPartnerDefaults() {
+  const partnerEl = document.getElementById("hasFiscalPartner");
+  const allowanceEl = document.getElementById("box3Allowance");
+  const debtEl = document.getElementById("debtThreshold");
+  if (!partnerEl || !allowanceEl || !debtEl) return;
+
+  if (partnerEl.value === "yes") {
+    allowanceEl.value = BOX3_2025_PARTNER_ALLOWANCE;
+    debtEl.value = BOX3_2025_PARTNER_DEBT_THRESHOLD;
+  } else {
+    allowanceEl.value = BOX3_2025_SINGLE_ALLOWANCE;
+    debtEl.value = BOX3_2025_SINGLE_DEBT_THRESHOLD;
+  }
+}
+
 function setupTabs(){document.querySelectorAll(".tab-button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab-button").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab-panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active")});document.querySelectorAll(".detail-tab-button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".detail-tab-button").forEach(x=>x.classList.remove("active"));b.classList.add("active");activeDetailScenario=b.dataset.detail;if(window.__lastResult)renderDetails(window.__lastResult)})}
-function init(){addRateRow({effectiveFrom:"2025-08-25",euribor:2.08});addRateRow({effectiveFrom:"2026-01-01",euribor:2.12});addEtfContributionRow({amount:10000,frequency:"Yearly",month:1,startYear:2026,endYear:2028});addEtfContributionRow({amount:16500,frequency:"Yearly",month:1,startYear:2029,endYear:2045});addLumpContributionRow({amount:0,year:2026,month:1,destination:"LT repayment",description:"optional"});document.querySelectorAll("input,select").forEach(el=>{el.addEventListener("input",calculate);el.addEventListener("change",calculate)});document.getElementById("addRateRow").onclick=()=>{addRateRow();calculate()};document.getElementById("addEtfContribution").onclick=()=>{addEtfContributionRow();calculate()};document.getElementById("addLumpContribution").onclick=()=>{addLumpContributionRow();calculate()};document.getElementById("downloadCsv").onclick=downloadCsv;window.addEventListener("resize",()=>{if(window.__lastResult)renderChart(window.__lastResult)});setupTabs();renderChartControls();calculate()}
+function init(){addRateRow({effectiveFrom:"2025-08-25",euribor:2.08});addRateRow({effectiveFrom:"2026-01-01",euribor:2.12});addEtfContributionRow({amount:10000,frequency:"Yearly",month:1,startYear:2026,endYear:2028});addEtfContributionRow({amount:16500,frequency:"Yearly",month:1,startYear:2029,endYear:2045});addLumpContributionRow({amount:0,year:2026,month:1,destination:"LT repayment",description:"optional"});document.querySelectorAll("input,select").forEach(el=>{el.addEventListener("input",calculate);el.addEventListener("change",calculate)});
+const fiscalPartnerEl=document.getElementById("hasFiscalPartner");
+if(fiscalPartnerEl){
+  fiscalPartnerEl.addEventListener("change",()=>{applyFiscalPartnerDefaults();calculate();});
+}document.getElementById("addRateRow").onclick=()=>{addRateRow();calculate()};document.getElementById("addEtfContribution").onclick=()=>{addEtfContributionRow();calculate()};document.getElementById("addLumpContribution").onclick=()=>{addLumpContributionRow();calculate()};document.getElementById("downloadCsv").onclick=downloadCsv;window.addEventListener("resize",()=>{if(window.__lastResult)renderChart(window.__lastResult)});setupTabs();renderChartControls();applyFiscalPartnerDefaults();calculate()}
 init();
