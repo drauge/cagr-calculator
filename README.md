@@ -83,3 +83,20 @@ Added:
   - hover a header to lightly highlight that column;
   - hover a row to lightly highlight the row;
   - intersection cell receives stronger highlight.
+
+
+## v7 changes
+
+Updated controls:
+- Light/dark theme control is now a pill-style toggle switch.
+- Fiscal partner for Box 3 is now a matching Yes/No toggle switch.
+- Fiscal partner toggle still updates visible Box 3 allowance and debt threshold fields.
+
+
+## v8 changes
+
+Dark-theme controls were aligned with the rest of the dark UI:
+- primary buttons now use darker blue hover/active states
+- secondary buttons no longer stay white in dark mode
+- tabs now use dark surfaces, blue active state, and softer hover states
+- focus rings and active states are theme-aware

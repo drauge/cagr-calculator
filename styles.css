@@ -29,16 +29,64 @@ body.dark{
 --col-hover:#151d2e;
 --cell-hover:#24344f;
 --shadow:rgba(0,0,0,.25);
+--button-bg:#2563eb;
+--button-bg-hover:#1d4ed8;
+--button-text:#eff6ff;
+--button-secondary-bg:#172033;
+--button-secondary-text:#bfdbfe;
+--tab-bg:#172033;
+--tab-bg-hover:#1f2a44;
+--tab-active-bg:#2563eb;
+--tab-active-text:#eff6ff;
+--focus-ring:rgba(147,197,253,.35);
 }
 *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
 .container{width:min(1360px,calc(100% - 32px));margin:32px auto} h1{margin:0 0 8px} h2{margin:0 0 14px;font-size:1.18rem} h3{margin:20px 0 10px;font-size:1rem}
 .muted,.note{color:var(--muted)} .note{margin:8px 0 0}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0;box-shadow:0 1px 2px var(--shadow);overflow:hidden}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:14px} label{display:grid;gap:6px;color:var(--muted);font-size:.9rem}
 input,select{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font:inherit;background:var(--input);color:var(--text)}
-button{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:8px;padding:9px 12px;cursor:pointer;white-space:nowrap} td button,button.secondary{background:#fff;color:var(--accent)}
+button{
+border:1px solid var(--button-bg);
+background:var(--button-bg);
+color:var(--button-text);
+border-radius:8px;
+padding:9px 12px;
+cursor:pointer;
+white-space:nowrap;
+transition:background 140ms ease,border-color 140ms ease,color 140ms ease,box-shadow 140ms ease,transform 80ms ease;
+}
+button:hover{background:var(--button-bg-hover);border-color:var(--button-bg-hover)}
+button:active{transform:translateY(1px)}
+button:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+td button,button.secondary{
+background:var(--button-secondary-bg);
+color:var(--button-secondary-text);
+border-color:var(--line);
+}
+td button:hover,button.secondary:hover{
+background:var(--tab-bg-hover);
+border-color:var(--accent);
+color:var(--accent);
+}
 .section-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.tabs{display:flex;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--line);margin-bottom:16px}
-.tab-button,.detail-tab-button{background:#fff;color:var(--accent);border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0}
-.tab-button.active,.detail-tab-button.active{background:var(--accent);color:#fff;border-color:var(--accent)}.tab-panel{display:none}.tab-panel.active{display:block}
+.tab-button,.detail-tab-button{
+background:var(--tab-bg);
+color:var(--button-secondary-text);
+border:1px solid var(--line);
+border-bottom:none;
+border-radius:8px 8px 0 0;
+box-shadow:none;
+}
+.tab-button:hover,.detail-tab-button:hover{
+background:var(--tab-bg-hover);
+border-color:var(--accent);
+color:var(--accent);
+}
+.tab-button.active,.detail-tab-button.active{
+background:var(--tab-active-bg);
+color:var(--tab-active-text);
+border-color:var(--tab-active-bg);
+}.tab-panel{display:none}.tab-panel.active{display:block}
 .table-wrap{width:100%;overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;padding-bottom:4px}.result-wrap{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:10px}
 table{width:100%;min-width:980px;border-collapse:collapse;font-size:.9rem}#summaryTable{min-width:1500px}#detailsTable{min-width:1700px}
 th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:right;vertical-align:middle;white-space:nowrap}th{background:var(--thead);color:var(--thead-text);font-weight:700;position:sticky;top:0;z-index:2}th:first-child,td:first-child{text-align:left}
@@ -105,4 +153,127 @@ body.dark th.header-hover {
   .top-header {
     flex-direction: column;
   }
+}
+
+
+/* Toggle switches */
+.theme-toggle {
+  display: none;
+}
+
+.field-label {
+  align-content: start;
+}
+
+.switch-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  user-select: none;
+}
+
+.theme-switch {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 11px;
+  background: color-mix(in srgb, var(--card) 88%, var(--accent) 12%);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+.inline-switch {
+  width: fit-content;
+  min-height: 38px;
+}
+
+.switch-control input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.switch-label {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.switch-slider {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background 160ms ease, box-shadow 160ms ease;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 70%, #000 30%);
+}
+
+.switch-slider::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.switch-control input:checked + .switch-slider {
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 70%, #000 30%);
+}
+
+.switch-control input:checked + .switch-slider::after {
+  transform: translateX(22px);
+  background: #fff;
+}
+
+.switch-control:has(input:focus-visible) .switch-slider {
+  outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  outline-offset: 2px;
+}
+
+body.dark .theme-switch {
+  background: color-mix(in srgb, var(--card) 70%, var(--accent) 30%);
+}
+
+body.dark .switch-slider::after {
+  background: #e5e7eb;
+}
+
+
+/* Dark theme control refinements */
+body.dark button {
+  box-shadow: 0 1px 2px rgba(0,0,0,.28);
+}
+
+body.dark td button,
+body.dark button.secondary,
+body.dark .tab-button,
+body.dark .detail-tab-button {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025);
+}
+
+body.dark td button:hover,
+body.dark button.secondary:hover,
+body.dark .tab-button:hover,
+body.dark .detail-tab-button:hover {
+  color: #dbeafe;
+  border-color: #60a5fa;
+}
+
+body.dark .tab-button.active,
+body.dark .detail-tab-button.active {
+  box-shadow: 0 -1px 0 rgba(255,255,255,.05) inset, 0 1px 2px rgba(0,0,0,.35);
+}
+
+body.dark .tabs {
+  border-bottom-color: #334155;
+}
+
+body.dark .switch-control input:checked + .switch-slider {
+  background: #2563eb;
 }

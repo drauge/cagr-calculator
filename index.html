@@ -13,10 +13,11 @@
     <h1>Scenario Comparison Calculator</h1>
     <p class="muted">Compare LT mortgage repayment, Amsterdam purchase, ETF compounding, property appreciation, Box 3 tax, and inflation-adjusted net worth.</p>
   </div>
-  <label class="theme-toggle" title="Switch theme">
-    <span>Light</span>
+  <label class="switch-control theme-switch" title="Switch theme">
+    <span class="switch-label">Light</span>
     <input id="themeToggle" type="checkbox" />
-    <span>Dark</span>
+    <span class="switch-slider" aria-hidden="true"></span>
+    <span class="switch-label">Dark</span>
   </label>
 </header>
 
@@ -33,11 +34,13 @@
 
 <h3>Dutch Box 3 assumptions</h3>
 <div class="grid">
-<label>Fiscal partner for Box 3?
-  <select id="hasFiscalPartner">
-    <option value="no" selected>No</option>
-    <option value="yes">Yes</option>
-  </select>
+<label class="field-label">Fiscal partner for Box 3?
+  <span class="switch-control inline-switch">
+    <span class="switch-label">No</span>
+    <input id="hasFiscalPartner" type="checkbox" />
+    <span class="switch-slider" aria-hidden="true"></span>
+    <span class="switch-label">Yes</span>
+  </span>
 </label>
 <label>Single-person tax-free allowance (€) <input id="box3Allowance" type="number" value="57684"/></label>
 <label>Debt threshold (€) <input id="debtThreshold" type="number" value="3800"/></label>
