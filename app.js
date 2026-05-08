@@ -23,7 +23,7 @@ const chartSeries = [
   { key: "grossGrowth", label: "Gross growth", color: "#ff7f0e", enabled: true },
   { key: "taxPaid", label: "Tax paid", color: "#d62728", enabled: true },
   { key: "endOfYearNetValue", label: "EOY net worth", color: "#9467bd", enabled: true },
-  { key: "mortgageDebtJan1", label: "Mortgage debt Jan 1", color: "#8c564b", enabled: false },
+  { key: "mortgageDebtJan1", label: "Mortgage debt Jan 1", color: "#8c564b", enabled: true },
 ];
 
 function n(value, fallback = 0) {
