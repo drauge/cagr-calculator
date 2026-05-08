@@ -100,3 +100,15 @@ Dark-theme controls were aligned with the rest of the dark UI:
 - secondary buttons no longer stay white in dark mode
 - tabs now use dark surfaces, blue active state, and softer hover states
 - focus rings and active states are theme-aware
+
+
+## v9 changes
+
+Added a EUR/USD/RUB segmented currency toggle for the **Overall performance & analysis** table only.
+
+Implementation:
+- Internal calculations remain in EUR.
+- Summary table monetary columns are converted for display.
+- USD uses the public Frankfurter API, based on ECB reference rates.
+- RUB uses public CBR daily reference data via `cbr-xml-daily.ru`.
+- If live FX loading fails, the table remains in EUR / falls back to available rates.

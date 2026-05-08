@@ -277,3 +277,65 @@ body.dark .tabs {
 body.dark .switch-control input:checked + .switch-slider {
   background: #2563eb;
 }
+
+
+.performance-head {
+  align-items: flex-start;
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.segmented-toggle {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px;
+  background: var(--button-secondary-bg);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+.segmented-toggle .segment {
+  border: 0;
+  background: transparent;
+  color: var(--button-secondary-text);
+  border-radius: 999px;
+  padding: 7px 12px;
+  min-width: 48px;
+  box-shadow: none;
+}
+
+.segmented-toggle .segment:hover {
+  background: var(--tab-bg-hover);
+  color: var(--accent);
+}
+
+.segmented-toggle .segment.active {
+  background: var(--tab-active-bg);
+  color: var(--tab-active-text);
+}
+
+.fx-status {
+  color: var(--muted);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+body.dark .segmented-toggle {
+  background: var(--tab-bg);
+}
+
+@media (max-width:650px) {
+  .performance-head,
+  .head-actions {
+    align-items: stretch;
+  }
+  .head-actions {
+    justify-content: flex-start;
+  }
+}

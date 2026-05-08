@@ -1,5 +1,87 @@
 const fmtEUR=new Intl.NumberFormat("en-IE",{style:"currency",currency:"EUR",maximumFractionDigits:0});
 const fmtEUR2=new Intl.NumberFormat("en-IE",{style:"currency",currency:"EUR",minimumFractionDigits:2,maximumFractionDigits:2});
+
+let summaryCurrency = "EUR";
+let fxRates = { EUR: 1, USD: null, RUB: null };
+let fxMeta = { USD: "", RUB: "" };
+
+function formatSummaryCurrency(value) {
+  const rate = fxRates[summaryCurrency] || 1;
+  const converted = value * rate;
+
+  return new Intl.NumberFormat("en-IE", {
+    style: "currency",
+    currency: summaryCurrency,
+    maximumFractionDigits: summaryCurrency === "RUB" ? 0 : 0,
+  }).format(converted);
+}
+
+function setFxStatus(message) {
+  const el = document.getElementById("fxStatus");
+  if (el) el.textContent = message;
+}
+
+async function loadFxRates() {
+  setFxStatus("Loading FX...");
+
+  try {
+    const [ecbResponse, cbrResponse] = await Promise.allSettled([
+      fetch("https://api.frankfurter.app/latest?from=EUR&to=USD", { cache: "no-store" }),
+      fetch("https://www.cbr-xml-daily.ru/daily_json.js", { cache: "no-store" }),
+    ]);
+
+    if (ecbResponse.status === "fulfilled" && ecbResponse.value.ok) {
+      const data = await ecbResponse.value.json();
+      if (data?.rates?.USD) {
+        fxRates.USD = data.rates.USD;
+        fxMeta.USD = `ECB ${data.date || ""}`.trim();
+      }
+    }
+
+    if (cbrResponse.status === "fulfilled" && cbrResponse.value.ok) {
+      const data = await cbrResponse.value.json();
+      const eurRub = data?.Valute?.EUR?.Value;
+      if (eurRub) {
+        fxRates.RUB = eurRub;
+        fxMeta.RUB = `CBR ${String(data.Date || "").slice(0, 10)}`.trim();
+      }
+    }
+
+    updateFxStatus();
+    if (window.__lastResult) renderSummary(window.__lastResult);
+  } catch (error) {
+    console.warn("FX loading failed", error);
+    setFxStatus("FX unavailable; EUR shown");
+  }
+}
+
+function updateFxStatus() {
+  if (summaryCurrency === "EUR") {
+    setFxStatus("EUR base");
+    return;
+  }
+
+  const rate = fxRates[summaryCurrency];
+  const meta = fxMeta[summaryCurrency];
+  if (!rate) {
+    setFxStatus(`${summaryCurrency} rate unavailable`);
+    return;
+  }
+
+  setFxStatus(`1 EUR = ${rate.toFixed(summaryCurrency === "RUB" ? 2 : 4)} ${summaryCurrency}${meta ? " · " + meta : ""}`);
+}
+
+function setupSummaryCurrencyToggle() {
+  document.querySelectorAll("#summaryCurrencyToggle .segment").forEach(button => {
+    button.addEventListener("click", () => {
+      summaryCurrency = button.dataset.currency;
+      document.querySelectorAll("#summaryCurrencyToggle .segment").forEach(b => b.classList.remove("active"));
+      button.classList.add("active");
+      updateFxStatus();
+      if (window.__lastResult) renderSummary(window.__lastResult);
+    });
+  });
+}
 const scenarioDefs=[{key:"A",label:"A. Repay LT + buy AMS",color:"#1f77b4",enabled:true},{key:"B",label:"B. Keep LT + no AMS",color:"#2ca02c",enabled:true},{key:"C",label:"C. Sell LT + buy AMS",color:"#ff7f0e",enabled:true}];
 
 const BOX3_2025_SINGLE_ALLOWANCE = 57684;
@@ -83,7 +165,7 @@ let contrib=0,growth=0;for(let mo=1;mo<=12;mo++){const c=etfContribution(m,year,
 const ltDebt=ltSold||ltRepaid?0:debtEoy(ltSchedule,year,m.ltLoanAmount),ltMarket=ltValue(m,year,ltSold),ltEquity=Math.max(0,ltMarket-ltDebt),amsDebt=amsOwned?debtEoy(amsSchedule,year,amsLoanUsed):0,amsVal=amsValue(m,sc.purchaseYear||year,year,amsOwned),amsEquity=Math.max(0,amsVal-amsDebt),total=etf+ltEquity+amsEquity,real=(etf+amsEquity)/Math.pow(1+m.nlInflation,year-m.projectionStartYear+1)+ltEquity/Math.pow(1+m.ltInflation,year-m.projectionStartYear+1);rows.push({year,etf,ltMarketValue:ltMarket,ltDebt,ltEquity,amsValue:amsVal,amsDebt,amsEquity,totalNetWorth:total,realNetWorth:real,box3Tax:tax,events:events.join("; ")})}
 const last=rows.at(-1);let comment=key==="B"?"Baseline; may not satisfy borrowing capacity":key==="C"?"Conditional on mother housing / sale feasibility":shortfall>0?"No year found where liquidity can fully repay LT debt within max wait year":`Dynamic repayment/purchase year: ${sc.purchaseYear}`;return{key,label:scenarioDefs.find(s=>s.key===key).label,rows,final:last,totalBox3Tax:totalTax,liquidityShortfall:shortfall,feasible:shortfall<=0,comment}}
 function simulateAll(){const model=readModel();return{model,scenarios:{A:simulateScenario(model,"A"),B:simulateScenario(model,"B"),C:simulateScenario(model,"C")}}}
-function renderSummary(res){const body=document.querySelector("#summaryTable tbody");body.innerHTML="";Object.values(res.scenarios).forEach(s=>{const r=s.final,tr=body.insertRow();[s.label,s.feasible?"Yes":"No",fmtEUR.format(r.etf),fmtEUR.format(r.ltEquity),fmtEUR.format(r.amsEquity),fmtEUR.format(r.totalNetWorth),fmtEUR.format(r.realNetWorth),fmtEUR.format(s.totalBox3Tax),fmtEUR.format(s.liquidityShortfall),s.comment].forEach((v,i)=>{const td=tr.insertCell();td.textContent=v;if(i===0||i===9)td.style.textAlign="left"})});const feasible=Object.values(res.scenarios).filter(s=>s.feasible);const byN=[...feasible].sort((a,b)=>b.final.totalNetWorth-a.final.totalNetWorth)[0],byR=[...feasible].sort((a,b)=>b.final.realNetWorth-a.final.realNetWorth)[0],byL=[...feasible].sort((a,b)=>b.final.etf-a.final.etf)[0];document.getElementById("bestNominal").textContent=byN?`${byN.label}: ${fmtEUR.format(byN.final.totalNetWorth)}`:"No feasible scenario";document.getElementById("bestReal").textContent=byR?`${byR.label}: ${fmtEUR.format(byR.final.realNetWorth)}`:"No feasible scenario";document.getElementById("bestLiquidity").textContent=byL?`${byL.label}: ${fmtEUR.format(byL.final.etf)}`:"No feasible scenario"}
+function renderSummary(res){const body=document.querySelector("#summaryTable tbody");body.innerHTML="";Object.values(res.scenarios).forEach(s=>{const r=s.final,tr=body.insertRow();[s.label,s.feasible?"Yes":"No",formatSummaryCurrency(r.etf),formatSummaryCurrency(r.ltEquity),formatSummaryCurrency(r.amsEquity),formatSummaryCurrency(r.totalNetWorth),formatSummaryCurrency(r.realNetWorth),formatSummaryCurrency(s.totalBox3Tax),formatSummaryCurrency(s.liquidityShortfall),s.comment].forEach((v,i)=>{const td=tr.insertCell();td.textContent=v;if(i===0||i===9)td.style.textAlign="left"})});const feasible=Object.values(res.scenarios).filter(s=>s.feasible);const byN=[...feasible].sort((a,b)=>b.final.totalNetWorth-a.final.totalNetWorth)[0],byR=[...feasible].sort((a,b)=>b.final.realNetWorth-a.final.realNetWorth)[0],byL=[...feasible].sort((a,b)=>b.final.etf-a.final.etf)[0];document.getElementById("bestNominal").textContent=byN?`${byN.label}: ${fmtEUR.format(byN.final.totalNetWorth)}`:"No feasible scenario";document.getElementById("bestReal").textContent=byR?`${byR.label}: ${fmtEUR.format(byR.final.realNetWorth)}`:"No feasible scenario";document.getElementById("bestLiquidity").textContent=byL?`${byL.label}: ${fmtEUR.format(byL.final.etf)}`:"No feasible scenario"}
 function renderDetails(res){const body=document.querySelector("#detailsTable tbody");body.innerHTML="";res.scenarios[activeDetailScenario].rows.forEach(r=>{const tr=body.insertRow();[r.year,fmtEUR.format(r.etf),fmtEUR.format(r.ltMarketValue),fmtEUR.format(r.ltDebt),fmtEUR.format(r.ltEquity),fmtEUR.format(r.amsValue),fmtEUR.format(r.amsDebt),fmtEUR.format(r.amsEquity),fmtEUR.format(r.totalNetWorth),fmtEUR.format(r.realNetWorth),fmtEUR.format(r.box3Tax),r.events].forEach((v,i)=>{const td=tr.insertCell();td.textContent=v;if(i===0||i===11)td.style.textAlign="left"})})}
 function renderChartControls(){const c=document.getElementById("chartControls");c.innerHTML="";scenarioDefs.forEach(s=>{const l=document.createElement("label");l.className="chart-control";const cb=document.createElement("input");cb.type="checkbox";cb.checked=s.enabled;cb.onchange=()=>{s.enabled=cb.checked;if(window.__lastResult)renderChart(window.__lastResult)};const sw=document.createElement("span");sw.className="swatch";sw.style.background=s.color;const t=document.createElement("span");t.textContent=s.label;l.append(cb,sw,t);c.appendChild(l)})}
 function svgEl(tag,attrs={}){const e=document.createElementNS("http://www.w3.org/2000/svg",tag);Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,String(v)));return e}
@@ -161,5 +243,5 @@ function init(){initTheme();addRateRow({effectiveFrom:"2025-08-25",euribor:2.08}
 const fiscalPartnerEl=document.getElementById("hasFiscalPartner");
 if(fiscalPartnerEl){
   fiscalPartnerEl.addEventListener("change",()=>{applyFiscalPartnerDefaults();calculate();});
-}document.getElementById("addRateRow").onclick=()=>{addRateRow();calculate()};document.getElementById("addEtfContribution").onclick=()=>{addEtfContributionRow();calculate()};document.getElementById("addLumpContribution").onclick=()=>{addLumpContributionRow();calculate()};document.getElementById("downloadCsv").onclick=downloadCsv;window.addEventListener("resize",()=>{if(window.__lastResult)renderChart(window.__lastResult)});setupTabs();renderChartControls();setupTableHeaderHover();applyFiscalPartnerDefaults();calculate()}
+}document.getElementById("addRateRow").onclick=()=>{addRateRow();calculate()};document.getElementById("addEtfContribution").onclick=()=>{addEtfContributionRow();calculate()};document.getElementById("addLumpContribution").onclick=()=>{addLumpContributionRow();calculate()};document.getElementById("downloadCsv").onclick=downloadCsv;window.addEventListener("resize",()=>{if(window.__lastResult)renderChart(window.__lastResult)});setupTabs();renderChartControls();setupTableHeaderHover();setupSummaryCurrencyToggle();applyFiscalPartnerDefaults();calculate();loadFxRates()}
 init();

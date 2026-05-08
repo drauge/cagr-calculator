@@ -128,7 +128,18 @@
 </section>
 
 <section class="card">
-<div class="section-head"><h2>Overall performance & analysis</h2><button id="downloadCsv" type="button">Download CSV</button></div>
+<div class="section-head performance-head">
+  <h2>Overall performance & analysis</h2>
+  <div class="head-actions">
+    <div class="segmented-toggle" id="summaryCurrencyToggle" aria-label="Summary table currency">
+      <button type="button" class="segment active" data-currency="EUR">EUR</button>
+      <button type="button" class="segment" data-currency="USD">USD</button>
+      <button type="button" class="segment" data-currency="RUB">RUB</button>
+    </div>
+    <span id="fxStatus" class="fx-status">EUR base</span>
+    <button id="downloadCsv" type="button">Download CSV</button>
+  </div>
+</div>
 <div class="kpis three">
 <div><span>Best nominal net worth</span><strong id="bestNominal">-</strong></div>
 <div><span>Best real net worth</span><strong id="bestReal">-</strong></div>
