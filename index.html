@@ -1,290 +1,137 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>CAGR + NL Box 3 + Mortgage Calculator</title>
-  <link rel="stylesheet" href="styles.css"/>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Scenario Comparison Calculator</title>
+<link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-  <main class="container">
-    <header>
-      <h1>CAGR + NL Box 3 + Mortgage Calculator</h1>
-      <p class="muted">ETF growth, Lithuanian mortgage amortization, Jan 1 Box 3 snapshots, treaty relief, after-tax return, and dynamic summary chart.</p>
-    </header>
+<main class="container">
+<header>
+<h1>Scenario Comparison Calculator</h1>
+<p class="muted">Compare LT mortgage repayment, Amsterdam purchase, ETF compounding, property appreciation, Box 3 tax, and inflation-adjusted net worth.</p>
+</header>
 
-    <section class="card">
-      <h2>Projection</h2>
-      <div class="grid">
-        <label>Projection start year
-          <input id="projectionStartYear" type="number" value="2025" min="2000" max="2100"/>
-        </label>
-        <label>Projection years
-          <input id="projectionYears" type="number" value="20" min="1" max="60"/>
-        </label>
-        <label>ETF value on Jan 1 start year (€)
-          <input id="etfStartingValue" type="number" value="0" min="0" step="100"/>
-        </label>
-        <label>ETF gross annualized return (%)
-          <input id="etfGrossReturn" type="number" value="10" step="0.1"/>
-        </label>
-      </div>
-    </section>
+<section class="card">
+<h2>Common variables</h2>
 
-    <section class="card">
-      <h2>Dutch Box 3 assumptions</h2>
-      <div class="grid">
-        <label>Single-person tax-free allowance (€)
-          <input id="box3Allowance" type="number" value="57684" min="0" step="100"/>
-        </label>
-        <label>Annual allowance growth (%)
-          <input id="allowanceGrowth" type="number" value="0" step="0.1"/>
-        </label>
-        <label>Debt threshold (€)
-          <input id="debtThreshold" type="number" value="3800" min="0" step="100"/>
-        </label>
-        <label>Other assets fictitious return (%)
-          <input id="otherAssetsReturn" type="number" value="5.88" step="0.01"/>
-        </label>
-        <label>Debt fictitious return deduction (%)
-          <input id="debtReturn" type="number" value="2.70" step="0.01"/>
-        </label>
-        <label>Box 3 tax rate (%)
-          <input id="box3TaxRate" type="number" value="36" step="0.1"/>
-        </label>
-      </div>
-      <p class="note">Simplified 2025-style method. Lithuanian real estate treaty relief is calculated with a prevention fraction.</p>
-    </section>
+<h3>Timeline & ETF</h3>
+<div class="grid">
+<label>Projection start year <input id="projectionStartYear" type="number" value="2025"/></label>
+<label>Projection years <input id="projectionYears" type="number" value="21"/></label>
+<label>ETF value on Jan 1 start year (€) <input id="etfStartingValue" type="number" value="0"/></label>
+<label>ETF gross annualized return (%) <input id="etfGrossReturn" type="number" value="10" step="0.1"/></label>
+</div>
 
-    <section class="card">
-      <h2>Lithuanian property + mortgage</h2>
-      <div class="grid">
-        <label>Purchase / property value (€)
-          <input id="propertyValue" type="number" value="204000" min="0" step="1000"/>
-        </label>
-        <label>Downpayment / equity (€)
-          <input id="downpayment" type="number" value="59250" min="0" step="1000"/>
-        </label>
-        <label>Loan amount (€)
-          <input id="loanAmount" type="number" value="144750" min="0" step="1000"/>
-        </label>
-        <label>Mortgage drawdown / start date
-          <input id="mortgageStartDate" type="date" value="2025-08-25"/>
-        </label>
-        <label>First payment date
-          <input id="firstPaymentDate" type="date" value="2025-09-08"/>
-        </label>
-        <label>Principal repayment start date
-          <input id="repaymentStartDate" type="date" value="2025-11-06"/>
-        </label>
-        <label>Regular payment day
-          <input id="paymentDay" type="number" value="6" min="1" max="31" step="1"/>
-        </label>
-        <label>Duration in months
-          <input id="durationMonths" type="number" value="240" min="1" step="1"/>
-        </label>
-        <label>Bank margin over Euribor6M (%)
-          <input id="bankMargin" type="number" value="1.57" step="0.01"/>
-        </label>
-        <label>Property sale date (optional)
-          <input id="propertySaleDate" type="date" value=""/>
-        </label>
-      </div>
-      <p class="note">First payment is exceptional; regular payments use the contractual payment day. First two payments are interest-only by default.
-        If a property sale date is set, property equity is transferred to ETF on that date and property/debt become zero afterwards.</p>
-    </section>
+<h3>Dutch Box 3 assumptions</h3>
+<div class="grid">
+<label>Single-person tax-free allowance (€) <input id="box3Allowance" type="number" value="57684"/></label>
+<label>Debt threshold (€) <input id="debtThreshold" type="number" value="3800"/></label>
+<label>Other assets fictitious return (%) <input id="otherAssetsReturn" type="number" value="5.88" step="0.01"/></label>
+<label>Debt fictitious return deduction (%) <input id="debtReturn" type="number" value="2.70" step="0.01"/></label>
+<label>Box 3 tax rate (%) <input id="box3TaxRate" type="number" value="36" step="0.1"/></label>
+</div>
 
-    <section class="card">
-      <div class="section-head">
-        <h2>Property appreciation schedule</h2>
-        <button id="addPropertyAppreciationRow" type="button">Add appreciation row</button>
-      </div>
-      <div class="table-wrap">
-        <table id="propertyAppreciationTable">
-          <thead>
-            <tr><th>Effective from</th><th>Annual appreciation (%)</th><th></th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <p class="note">
-        Tracks property price growth over time. Default 0% means the property value stays flat.
-        The calculated value is used in Box 3 and net worth calculations.
-      </p>
-    </section>
+<h3>LT property & mortgage</h3>
+<div class="grid">
+<label>LT purchase / tax value (€) <input id="ltPropertyValue" type="number" value="204000"/></label>
+<label>LT initial equity (€) <input id="ltDownpayment" type="number" value="59250"/></label>
+<label>LT loan amount (€) <input id="ltLoanAmount" type="number" value="144750"/></label>
+<label>LT start date <input id="ltStartDate" type="date" value="2025-08-25"/></label>
+<label>LT first payment <input id="ltFirstPayment" type="date" value="2025-09-08"/></label>
+<label>LT principal start <input id="ltPrincipalStart" type="date" value="2025-11-06"/></label>
+<label>LT payment day <input id="ltPaymentDay" type="number" value="6"/></label>
+<label>LT term months <input id="ltMonths" type="number" value="240"/></label>
+<label>LT margin over Euribor6M (%) <input id="ltMargin" type="number" value="1.57" step="0.01"/></label>
+<label>LT annual appreciation (%) <input id="ltAppreciation" type="number" value="0" step="0.1"/></label>
+<label>LT annual inflation (%) <input id="ltInflation" type="number" value="0" step="0.1"/></label>
+</div>
 
-    <section class="card">
-      <div class="section-head">
-        <h2>Inflation schedules</h2>
-      </div>
+<h3>Amsterdam property & mortgage</h3>
+<div class="grid">
+<label>Amsterdam purchase price (€) <input id="amsPrice" type="number" value="650000"/></label>
+<label>Amsterdam mortgage amount (€) <input id="amsLoan" type="number" value="650000"/></label>
+<label>Amsterdam mortgage rate (%) <input id="amsRate" type="number" value="4.06" step="0.01"/></label>
+<label>Amsterdam term months <input id="amsMonths" type="number" value="360"/></label>
+<label>Amsterdam annual appreciation (%) <input id="amsAppreciation" type="number" value="5" step="0.1"/></label>
+<label>Purchase costs (€) <input id="amsCosts" type="number" value="0"/></label>
+<label>Monthly ownership costs (€) <input id="ownershipCosts" type="number" value="0"/></label>
+<label>Rent avoided (€ / month) <input id="rentAvoided" type="number" value="0"/></label>
+<label>NL annual inflation (%) <input id="nlInflation" type="number" value="0" step="0.1"/></label>
+</div>
 
-      <div class="split-grid">
-        <div>
-          <div class="section-head compact">
-            <h3>NL inflation schedule</h3>
-            <button id="addNlInflationRow" type="button">Add NL row</button>
-          </div>
-          <div class="table-wrap small-table">
-            <table id="nlInflationTable">
-              <thead>
-                <tr><th>Effective from</th><th>Annual inflation (%)</th><th></th></tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-          <p class="note">Used to inflation-adjust ETF value.</p>
-        </div>
+<h3>Euribor6M schedule</h3>
+<div class="section-head"><p class="note">Used for the LT mortgage forecast.</p><button id="addRateRow" type="button">Add rate row</button></div>
+<div class="table-wrap"><table id="rateTable"><thead><tr><th>Effective from</th><th>Euribor6M (%)</th><th></th></tr></thead><tbody></tbody></table></div>
 
-        <div>
-          <div class="section-head compact">
-            <h3>LT inflation schedule</h3>
-            <button id="addLtInflationRow" type="button">Add LT row</button>
-          </div>
-          <div class="table-wrap small-table">
-            <table id="ltInflationTable">
-              <thead>
-                <tr><th>Effective from</th><th>Annual inflation (%)</th><th></th></tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-          <p class="note">Used to inflation-adjust Lithuanian property equity.</p>
-        </div>
-      </div>
+<h3>ETF contributions</h3>
+<div class="section-head"><p class="note">Shared default contributions.</p><button id="addEtfContribution" type="button">Add contribution</button></div>
+<div class="table-wrap"><table id="etfContributionTable"><thead><tr><th>Amount (€)</th><th>Frequency</th><th>Month</th><th>Start year</th><th>End year</th><th></th></tr></thead><tbody></tbody></table></div>
+</section>
 
-      <p class="note">
-        Inflation-adjusted values are expressed in start-year purchasing power.
-        NL inflation is applied to ETF values; LT inflation is applied to property equity.
-      </p>
-    </section>
+<section class="card">
+<h2>Scenario-specific assumptions</h2>
+<div class="tabs">
+<button class="tab-button active" data-tab="scenarioA" type="button">A. Repay LT + buy AMS</button>
+<button class="tab-button" data-tab="scenarioB" type="button">B. Keep LT + no AMS</button>
+<button class="tab-button" data-tab="scenarioC" type="button">C. Sell LT + buy AMS</button>
+</div>
 
-    <section class="card">
-      <div class="section-head">
-        <h2>Euribor6M schedule</h2>
-        <button id="addRateRow" type="button">Add rate row</button>
-      </div>
-      <div class="table-wrap">
-        <table id="rateTable">
-          <thead>
-            <tr><th>Effective from</th><th>Euribor6M (%)</th><th></th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <p class="note">Default: 2025-08-25 → 2.08%; 2026-01-01 → 2.12%.</p>
-    </section>
+<div id="scenarioA" class="tab-panel active">
+<h3>A. Repay LT mortgage fully + buy Amsterdam</h3>
+<div class="grid">
+<label>Amsterdam purchase year <input id="aPurchaseYear" type="number" value="2026"/></label>
+<label>LT full repayment year <input id="aRepayYear" type="number" value="2026"/></label>
+<label>Use ETF to repay LT debt <select id="aUseEtf"><option value="yes" selected>yes</option><option value="no">no</option></select></label>
+<label>Extra cash available (€) <input id="aExtraCash" type="number" value="0"/></label>
+</div>
+</div>
 
-    <section class="card">
-      <div class="section-head">
-        <h2>ETF contributions</h2>
-        <button id="addEtfContribution" type="button">Add recurring contribution</button>
-      </div>
-      <div class="table-wrap">
-        <table id="etfContributionTable">
-          <thead>
-            <tr><th>Amount (€)</th><th>Frequency</th><th>Month</th><th>Start year</th><th>End year</th><th></th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <p class="note">Monthly rows ignore Month. Yearly rows use Month = 1..12.</p>
-    </section>
+<div id="scenarioB" class="tab-panel">
+<h3>B. Keep LT mortgage until maturity + no Amsterdam purchase</h3>
+<p class="note">This is the baseline investment-compounding scenario.</p>
+</div>
 
-    <section class="card">
-      <div class="section-head">
-        <h2>ETF lump sums</h2>
-        <button id="addLumpSum" type="button">Add lump sum</button>
-      </div>
-      <div class="table-wrap">
-        <table id="lumpSumTable">
-          <thead>
-            <tr><th>Amount (€)</th><th>Year</th><th>Month</th><th>Description</th><th></th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
+<div id="scenarioC" class="tab-panel">
+<h3>C. Sell LT property + buy Amsterdam</h3>
+<div class="grid">
+<label>LT sale year <input id="cSaleYear" type="number" value="2035"/></label>
+<label>Amsterdam purchase year <input id="cPurchaseYear" type="number" value="2035"/></label>
+<label>LT sale costs (% sale price) <input id="cSaleCostsPct" type="number" value="0" step="0.1"/></label>
+<label>Mother housing reserve (€) <input id="cMotherReserve" type="number" value="0"/></label>
+<label>Allocate net proceeds <select id="cAllocate"><option value="etf" selected>ETF</option><option value="downpayment">Amsterdam downpayment</option></select></label>
+</div>
+</div>
+</section>
 
-    <section class="card">
-      <div class="section-head">
-        <h2>Summary chart</h2>
-        <button id="resetChartSeries" type="button" class="secondary">Show all</button>
-      </div>
-      <div id="chartControls" class="chart-controls"></div>
-      <div class="chart-wrap">
-        <svg id="summaryChart" role="img" aria-label="Summary line chart"></svg>
-      </div>
-      <p class="note">X-axis = years. Y-axis dynamically rescales based only on enabled lines.</p>
-    </section>
+<section class="card">
+<div class="section-head"><h2>Overall performance & analysis</h2><button id="downloadCsv" type="button">Download CSV</button></div>
+<div class="kpis three">
+<div><span>Best nominal net worth</span><strong id="bestNominal">-</strong></div>
+<div><span>Best real net worth</span><strong id="bestReal">-</strong></div>
+<div><span>Most liquid final ETF</span><strong id="bestLiquidity">-</strong></div>
+</div>
+<div class="table-wrap result-wrap"><table id="summaryTable">
+<thead><tr><th>Scenario</th><th>Feasible?</th><th>Final ETF</th><th>LT equity</th><th>AMS equity</th><th>Total net worth</th><th>Inflation-adjusted net worth</th><th>Total Box 3 tax</th><th>Liquidity shortfall</th><th>Comment</th></tr></thead><tbody></tbody>
+</table></div>
+<h3>Scenario chart: total net worth</h3>
+<div id="chartControls" class="chart-controls"></div>
+<div class="chart-wrap"><svg id="chart"></svg></div>
+</section>
 
-    <section class="card">
-      <div class="section-head">
-        <h2>Results</h2>
-        <button id="downloadCsv" type="button">Download CSV</button>
-      </div>
-
-      <div class="kpis">
-        <div><span>Final ETF value after tax</span><strong id="finalEtf">€0</strong></div>
-        <div><span>Inflation-adjusted ETF value</span><strong id="finalEtfReal">€0</strong></div>
-        <div><span>Total net worth</span><strong id="finalNetWorth">€0</strong></div>
-        <div><span>Inflation-adjusted net worth</span><strong id="finalNetWorthReal">€0</strong></div>
-        <div><span>Money-weighted annualized return</span><strong id="moneyWeighted">0.00%</strong></div>
-        <div><span>Total Box 3 tax paid</span><strong id="totalTax">€0</strong></div>
-      </div>
-
-      <div class="table-wrap result-wrap">
-        <table id="summaryTable">
-          <thead>
-            <tr>
-              <th>Year</th>
-              <th>ETF start balance</th>
-              <th>Contributions</th>
-              <th>Gross growth</th>
-              <th>ETF end value after tax</th>
-              <th>Inflation-adjusted ETF value</th>
-              <th>Mortgage debt Jan 1</th>
-              <th>Accumulated property capital Jan 1</th>
-              <th>Property value Jan 1</th>
-              <th>EOY net worth</th>
-              <th>Inflation-adjusted net worth</th>
-              <th>Box 3 tax before relief</th>
-              <th>LT treaty relief</th>
-              <th>Tax paid</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <p class="note">EOY net worth = ETF end value after tax + estimated property equity using appreciated property value. Inflation-adjusted ETF uses NL inflation; inflation-adjusted property equity uses LT inflation.</p>
-    </section>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Mortgage forecast</h2>
-        <button id="downloadMortgageCsv" type="button">Download mortgage CSV</button>
-      </div>
-      <div class="table-wrap mortgage-wrap">
-        <table id="mortgageTable">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Payment date</th>
-              <th>Rate</th>
-              <th>Days</th>
-              <th>Start debt</th>
-              <th>Principal</th>
-              <th>Interest</th>
-              <th>Total payment</th>
-              <th>End debt</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <p class="note">First irregular interest-only periods use actual days. Regular annuity rows use monthly interest.</p>
-    </section>
-  </main>
-
-  <script src="app.js"></script>
+<section class="card">
+<h2>Yearly details</h2>
+<div class="tabs detail-tabs">
+<button class="detail-tab-button active" data-detail="A" type="button">Scenario A</button>
+<button class="detail-tab-button" data-detail="B" type="button">Scenario B</button>
+<button class="detail-tab-button" data-detail="C" type="button">Scenario C</button>
+</div>
+<div class="table-wrap result-wrap"><table id="detailsTable">
+<thead><tr><th>Year</th><th>ETF EOY</th><th>LT value</th><th>LT debt</th><th>LT equity</th><th>AMS value</th><th>AMS debt</th><th>AMS equity</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Events</th></tr></thead><tbody></tbody>
+</table></div>
+</section>
+</main>
+<script src="app.js"></script>
 </body>
 </html>
