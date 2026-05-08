@@ -29,3 +29,33 @@ Instead:
 Added:
 - optional LT mortgage lump-sum repayments table
 - these repayments reduce the LT mortgage forecast before the dynamic Scenario A affordability test
+
+
+## v3 changes
+
+The old dedicated LT lump-sum repayment table was replaced with a unified **Lump sum contributions** table.
+
+Each row has:
+- amount
+- year
+- month
+- destination: `ETF` or `LT repayment`
+- description
+
+Scenario logic:
+- `ETF` destination increases ETF balance in that year/month.
+- `LT repayment` destination reduces the LT mortgage balance in the mortgage forecast.
+- Scenario A dynamic repayment/purchase year uses both:
+  - ETF-directed lump sums when calculating available ETF liquidity
+  - LT-repayment-directed lump sums when calculating remaining LT mortgage debt
+
+
+## v4 changes: Box 3 fiscal partner flag
+
+Added **Fiscal partner for Box 3?**
+
+If enabled, the model uses 2025 joint Box 3 limits:
+- heffingsvrij vermogen: EUR 115,368
+- debt threshold: EUR 7,600
+
+The model allocates the combined Box 3 allowance fully to the user's side, as requested.

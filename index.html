@@ -26,12 +26,19 @@
 
 <h3>Dutch Box 3 assumptions</h3>
 <div class="grid">
+<label>Fiscal partner for Box 3?
+  <select id="hasFiscalPartner">
+    <option value="no" selected>No</option>
+    <option value="yes">Yes</option>
+  </select>
+</label>
 <label>Single-person tax-free allowance (€) <input id="box3Allowance" type="number" value="57684"/></label>
 <label>Debt threshold (€) <input id="debtThreshold" type="number" value="3800"/></label>
 <label>Other assets fictitious return (%) <input id="otherAssetsReturn" type="number" value="5.88" step="0.01"/></label>
 <label>Debt fictitious return deduction (%) <input id="debtReturn" type="number" value="2.70" step="0.01"/></label>
 <label>Box 3 tax rate (%) <input id="box3TaxRate" type="number" value="36" step="0.1"/></label>
 </div>
+<p class="note">If fiscal partner is enabled, the model uses the 2025 joint Box 3 allowance (€115,368) and joint debt threshold (€7,600), allocated fully to your side in the calculation.</p>
 
 <h3>LT property & mortgage</h3>
 <div class="grid">
@@ -69,9 +76,9 @@
 <div class="section-head"><p class="note">Shared default contributions.</p><button id="addEtfContribution" type="button">Add contribution</button></div>
 <div class="table-wrap"><table id="etfContributionTable"><thead><tr><th>Amount (€)</th><th>Frequency</th><th>Month</th><th>Start year</th><th>End year</th><th></th></tr></thead><tbody></tbody></table></div>
 
-<h3>LT mortgage lump-sum repayments</h3>
-<div class="section-head"><p class="note">Optional extra repayments towards the LT mortgage. Applied before dynamic Scenario A full-repayment test.</p><button id="addLtLumpRepayment" type="button">Add LT repayment</button></div>
-<div class="table-wrap"><table id="ltLumpRepaymentTable"><thead><tr><th>Amount (€)</th><th>Year</th><th>Month</th><th>Description</th><th></th></tr></thead><tbody></tbody></table></div>
+<h3>Lump sum contributions</h3>
+<div class="section-head"><p class="note">Optional one-off contributions. Choose whether each amount goes to ETF or LT mortgage repayment.</p><button id="addLumpContribution" type="button">Add lump sum</button></div>
+<div class="table-wrap"><table id="lumpContributionTable"><thead><tr><th>Amount (€)</th><th>Year</th><th>Month</th><th>Destination</th><th>Description</th><th></th></tr></thead><tbody></tbody></table></div>
 </section>
 
 <section class="card">
