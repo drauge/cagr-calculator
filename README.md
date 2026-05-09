@@ -66,3 +66,53 @@ Therefore, if the Inflation calculator has:
 - Target year = 2054
 
 then its cumulative inflation factor and the pension section's inflation factor to 2054 will match.
+
+
+## v13 fixes
+
+Implemented the math/logic correction plan:
+1. Added Amsterdam net mortgage payment/month and subtract it from ETF cashflow after Amsterdam purchase.
+2. Fixed LT mortgage amortization: principal repayment months now exclude interest-only months, so debt reaches zero at maturity.
+3. Scenario A dynamic search now includes Jan 1 Box 3 tax and same-year monthly cashflows before deciding the repayment/purchase month.
+4. Added LT sale month for scenarios B and D; sale proceeds use sale-month property value and sale-month mortgage debt.
+5. Pension ETF income is now net of estimated annual Box 3 tax.
+6. Liquidity shortfalls are tracked instead of silently flooring ETF to zero.
+7. Scenario real net worth now uses the same inflation factor engine as the Inflation calculator.
+
+
+## v14 changes: Store and compare
+
+Added a **Store and compare** button in Overall performance & analysis.
+
+Behavior:
+- Saves the current calculation snapshot into browser `localStorage`.
+- After parameter changes, shows stored vs current values and the difference.
+- Comparison includes:
+  - scenario final ETF
+  - LT equity
+  - AMS equity
+  - total net worth
+  - inflation-adjusted net worth
+  - total Box 3 tax
+  - liquidity shortfall
+  - pension ETF base
+  - pension income values
+  - pension/inflation factor
+- Diff colors:
+  - green when higher is better and the current value is higher
+  - red when higher is better and the current value is lower
+  - reversed for tax, liquidity shortfall, and inflation factors
+
+
+## v15 changes: generalized naming and retirement-year projection
+
+Terminology was generalized:
+- "LT property / mortgage" is now "2nd property abroad / mortgage".
+- "Amsterdam property / mortgage" is now "NL property / mortgage".
+- Scenario labels were updated accordingly.
+
+Projection settings:
+- "Projection years" is now derived from:
+  - Projection start year
+  - Retirement year
+- The UI displays calculated projection years as a read-only field.

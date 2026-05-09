@@ -46,3 +46,44 @@ tbody tr:hover td{background:var(--row-hover)}td.col-hover,th.col-hover{backgrou
 .switch-control:has(input:disabled) {
   opacity: 0.72;
 }
+
+
+/* Stored-vs-current comparison */
+.hidden {
+  display: none !important;
+}
+
+.stored-comparison {
+  margin-top: 18px;
+}
+
+.compare-wrap {
+  max-height: 420px;
+}
+
+#storedComparisonTable {
+  min-width: 900px;
+}
+
+.diff-good {
+  color: #12805c;
+  font-weight: 700;
+}
+
+.diff-bad {
+  color: #b42318;
+  font-weight: 700;
+}
+
+.diff-neutral {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+body.dark .diff-good {
+  color: #6ee7b7;
+}
+
+body.dark .diff-bad {
+  color: #fca5a5;
+}

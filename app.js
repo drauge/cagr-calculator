@@ -2,10 +2,10 @@ const fmtEUR=new Intl.NumberFormat("en-IE",{style:"currency",currency:"EUR",maxi
 const fmtEUR2=new Intl.NumberFormat("en-IE",{style:"currency",currency:"EUR",minimumFractionDigits:2,maximumFractionDigits:2});
 
 const scenarioDefs=[
-  {key:"A",label:"A. Repay LT + buy AMS",color:"#1f77b4",enabled:true},
-  {key:"B",label:"B. Sell LT + buy AMS",color:"#ff7f0e",enabled:true},
-  {key:"C",label:"C. Keep LT + no AMS",color:"#2ca02c",enabled:true},
-  {key:"D",label:"D. Sell LT + ETF only",color:"#9467bd",enabled:true},
+  {key:"A",label:"A. Repay 2nd mortgage + buy NL property",color:"#1f77b4",enabled:true},
+  {key:"B",label:"B. Sell 2nd property + buy NL property",color:"#ff7f0e",enabled:true},
+  {key:"C",label:"C. Keep 2nd property + no NL property",color:"#2ca02c",enabled:true},
+  {key:"D",label:"D. Sell 2nd property + ETF only",color:"#9467bd",enabled:true},
 ];
 
 const BOX3_2025_SINGLE_ALLOWANCE=57684;
@@ -40,12 +40,12 @@ function addSelectCell(row,value,values){const td=document.createElement("td"),s
 function addRemoveButton(row){const td=document.createElement("td"),b=document.createElement("button");b.type="button";b.className="secondary";b.textContent="Remove";b.onclick=()=>{row.remove();calculate()};td.appendChild(b);row.appendChild(td)}
 function addRateRow({effectiveFrom="2025-08-25",euribor=2.08}={}){const r=document.querySelector("#rateTable tbody").insertRow();addInputCell(r,"date",effectiveFrom);addInputCell(r,"number",euribor,{step:"0.01"});addRemoveButton(r)}
 function addEtfContributionRow({amount=0,frequency="Yearly",month=1,startYear=2025,endYear=2045}={}){const r=document.querySelector("#etfContributionTable tbody").insertRow();addInputCell(r,"number",amount,{min:"0",step:"100"});addSelectCell(r,frequency,["Yearly","Monthly"]);addInputCell(r,"number",month,{min:"1",max:"12",step:"1"});addInputCell(r,"number",startYear,{min:"2000",max:"2100"});addInputCell(r,"number",endYear,{min:"2000",max:"2100"});addRemoveButton(r)}
-function addLumpContributionRow({amount=0,year=2026,month=1,destination="ETF",description=""}={}){const r=document.querySelector("#lumpContributionTable tbody").insertRow();addInputCell(r,"number",amount,{min:"0",step:"100"});addInputCell(r,"number",year,{min:"2000",max:"2100"});addInputCell(r,"number",month,{min:"1",max:"12"});addSelectCell(r,destination,["ETF","LT repayment"]);addInputCell(r,"text",description);addRemoveButton(r)}
+function addLumpContributionRow({amount=0,year=2026,month=1,destination="ETF",description=""}={}){const r=document.querySelector("#lumpContributionTable tbody").insertRow();addInputCell(r,"number",amount,{min:"0",step:"100"});addInputCell(r,"number",year,{min:"2000",max:"2100"});addInputCell(r,"number",month,{min:"1",max:"12"});addSelectCell(r,destination,["ETF","2nd repayment"]);addInputCell(r,"text",description);addRemoveButton(r)}
 
 function readModel(){
-  const start=Math.round(inputNumber("projectionStartYear")),years=Math.max(1,Math.round(inputNumber("projectionYears")));
+  const start=Math.round(inputNumber("projectionStartYear")),retirementYear=Math.max(start,Math.round(inputNumber("retirementYear"))),years=Math.max(1,retirementYear-start+1); const projectionYearsEl=document.getElementById("projectionYears"); if(projectionYearsEl) projectionYearsEl.value=years;
   return {
-    projectionStartYear:start,projectionYears:years,projectionEndYear:start+years-1,
+    projectionStartYear:start,retirementYear,projectionYears:years,projectionEndYear:retirementYear,
     etfStartingValue:inputNumber("etfStartingValue"),etfGrossReturn:inputPct("etfGrossReturn"),personalInflation:inputPct("personalInflation"),
     hasFiscalPartner:document.getElementById("hasFiscalPartner")?.checked===true,box3Allowance:inputNumber("box3Allowance"),debtThreshold:inputNumber("debtThreshold"),
     otherAssetsReturn:inputPct("otherAssetsReturn"),debtReturn:inputPct("debtReturn"),box3TaxRate:inputPct("box3TaxRate"),
@@ -54,58 +54,178 @@ function readModel(){
     ltPrincipalStart:document.getElementById("ltPrincipalStart").value,ltPaymentDay:Math.round(inputNumber("ltPaymentDay")),ltMonths:Math.round(inputNumber("ltMonths")),
     ltMargin:inputPct("ltMargin"),ltAppreciation:inputPct("ltAppreciation"),
     amsPrice:inputNumber("amsPrice"),amsLoan:inputNumber("amsLoan"),amsRate:inputPct("amsRate"),amsMonths:Math.round(inputNumber("amsMonths")),
-    amsAppreciation:inputPct("amsAppreciation"),amsCosts:inputNumber("amsCosts"),ownershipCosts:inputNumber("ownershipCosts"),rentAvoided:inputNumber("rentAvoided"),
+    amsAppreciation:inputPct("amsAppreciation"),amsCosts:inputNumber("amsCosts"),amsNetMortgagePayment:inputNumber("amsNetMortgagePayment"),ownershipCosts:inputNumber("ownershipCosts"),rentAvoided:inputNumber("rentAvoided"),
     rateSchedule:tableRows("#rateTable").map(([effectiveFrom,euribor])=>({effectiveFrom,euribor:n(euribor)/100})).filter(r=>r.effectiveFrom).sort((a,b)=>a.effectiveFrom.localeCompare(b.effectiveFrom)),
     etfContributions:tableRows("#etfContributionTable").map(([amount,frequency,month,startYear,endYear])=>({amount:n(amount),frequency,month:Math.round(n(month,1)),startYear:Math.round(n(startYear,start)),endYear:Math.round(n(endYear,start))})),
     lumpContributions:tableRows("#lumpContributionTable").map(([amount,year,month,destination,description])=>({amount:n(amount),year:Math.round(n(year,start)),month:Math.round(n(month,1)),destination,description})),
     scenarios:{
       A:{useEtf:document.getElementById("aUseEtf").value==="yes",extraCash:inputNumber("aExtraCash"),earliestPurchaseYear:Math.round(inputNumber("aEarliestPurchaseYear")),maxWaitYear:Math.round(inputNumber("aMaxWaitYear"))},
-      B:{saleYear:Math.round(inputNumber("bSaleYear")),purchaseYear:Math.round(inputNumber("bPurchaseYear")),saleCostsPct:inputPct("bSaleCostsPct"),motherReserve:inputNumber("bMotherReserve"),allocate:document.getElementById("bAllocate").value},
+      B:{saleYear:Math.round(inputNumber("bSaleYear")),saleMonth:Math.max(1,Math.min(12,Math.round(inputNumber("bSaleMonth")))),purchaseYear:Math.round(inputNumber("bPurchaseYear")),saleCostsPct:inputPct("bSaleCostsPct"),motherReserve:inputNumber("bMotherReserve"),allocate:document.getElementById("bAllocate").value},
       C:{},
-      D:{saleYear:Math.round(inputNumber("dSaleYear")),saleCostsPct:inputPct("dSaleCostsPct"),motherReserve:inputNumber("dMotherReserve")}
+      D:{saleYear:Math.round(inputNumber("dSaleYear")),saleMonth:Math.max(1,Math.min(12,Math.round(inputNumber("dSaleMonth")))),saleCostsPct:inputPct("dSaleCostsPct"),motherReserve:inputNumber("dMotherReserve")}
     }
   };
 }
 
 function activeEuribor(model,date){let active=model.rateSchedule[0]?.euribor??0;for(const r of model.rateSchedule)if(r.effectiveFrom<=date)active=r.euribor;return active}
 function annuityPayment(principal,monthlyRate,months){if(principal<=0||months<=0)return 0;if(Math.abs(monthlyRate)<1e-12)return principal/months;return principal*monthlyRate/(1-Math.pow(1+monthlyRate,-months))}
-function buildLtSchedule(m){const dates=[];for(let i=0;i<m.ltMonths;i++)dates.push(i===0?m.ltFirstPayment:monthlyDateByDay(m.ltFirstPayment,i,m.ltPaymentDay));const startIdx=Math.max(0,dates.findIndex(d=>d>=m.ltPrincipalStart));let balance=m.ltLoanAmount,pmt=0,key=null,rows=[];const lumpMap=new Map();(m.lumpContributions||[]).filter(x=>x.destination==="LT repayment").forEach(x=>{if(x.amount>0){const k=`${x.year}-${String(x.month).padStart(2,"0")}`;lumpMap.set(k,(lumpMap.get(k)||0)+x.amount)}});for(let i=0;i<dates.length;i++){const d=dates[i],prev=i===0?m.ltStartDate:dates[i-1],start=balance,annual=activeEuribor(m,d)+m.ltMargin,mr=annual/12,isPrin=i>=startIdx,idx=Math.max(0,i-startIdx),rem=Math.max(1,m.ltMonths-idx),k=`${Math.floor(idx/6)}-${annual.toFixed(8)}`;if(isPrin&&k!==key){key=k;pmt=annuityPayment(start,mr,rem)}const interest=isPrin?start*mr:start*annual*Math.max(0,daysBetween(prev,d))/365;let principal=isPrin?Math.max(0,Math.min(start,pmt-interest)):0;const ym=`${dateYear(d)}-${String(dateMonth(d)).padStart(2,"0")}`;const lump=Math.max(0,Math.min(start-principal,lumpMap.get(ym)||0));principal+=lump;balance=Math.max(0,start-principal);rows.push({dateString:d,year:dateYear(d),month:dateMonth(d),balanceStart:start,balanceEnd:balance,principal,interest,payment:principal+interest,lumpRepayment:lump})}return rows}
+function buildLtSchedule(m){
+  const dates=[];
+  for(let i=0;i<m.ltMonths;i++) dates.push(i===0?m.ltFirstPayment:monthlyDateByDay(m.ltFirstPayment,i,m.ltPaymentDay));
+  const foundStart=dates.findIndex(d=>d>=m.ltPrincipalStart);
+  const startIdx=foundStart>=0?foundStart:0;
+  const principalMonthsTotal=Math.max(1,dates.length-startIdx);
+  let balance=m.ltLoanAmount,pmt=0,key=null,rows=[];
+  const lumpMap=new Map();
+  (m.lumpContributions||[]).filter(x=>x.destination==="2nd repayment").forEach(x=>{
+    if(x.amount>0){
+      const k=`${x.year}-${String(x.month).padStart(2,"0")}`;
+      lumpMap.set(k,(lumpMap.get(k)||0)+x.amount);
+    }
+  });
+  for(let i=0;i<dates.length;i++){
+    const d=dates[i],prev=i===0?m.ltStartDate:dates[i-1],start=balance;
+    const annual=activeEuribor(m,d)+m.ltMargin,mr=annual/12;
+    const isPrin=i>=startIdx,idx=Math.max(0,i-startIdx);
+    const rem=Math.max(1,principalMonthsTotal-idx);
+    const k=`${Math.floor(idx/6)}-${annual.toFixed(8)}-${rem}`;
+    if(isPrin&&k!==key){key=k;pmt=annuityPayment(start,mr,rem)}
+    const interest=isPrin?start*mr:start*annual*Math.max(0,daysBetween(prev,d))/365;
+    let principal=isPrin?Math.max(0,Math.min(start,pmt-interest)):0;
+    const ym=`${dateYear(d)}-${String(dateMonth(d)).padStart(2,"0")}`;
+    const lump=Math.max(0,Math.min(start-principal,lumpMap.get(ym)||0));
+    principal+=lump;
+    balance=Math.max(0,start-principal);
+    if(i===dates.length-1 && balance<1) balance=0;
+    rows.push({dateString:d,year:dateYear(d),month:dateMonth(d),balanceStart:start,balanceEnd:balance,principal,interest,payment:principal+interest,lumpRepayment:lump});
+  }
+  return rows;
+}
 function buildAmsSchedule(m,purchaseYear,loan){let balance=loan,rows=[],mr=m.amsRate/12,pmt=annuityPayment(loan,mr,m.amsMonths);for(let i=0;i<m.amsMonths;i++){const d=ymToDate(purchaseYear,1+i),year=d.getUTCFullYear(),month=d.getUTCMonth()+1,start=balance,interest=start*mr,principal=Math.max(0,Math.min(start,pmt-interest));balance=Math.max(0,start-principal);rows.push({year,month,balanceStart:start,balanceEnd:balance,principal,interest,payment:principal+interest})}return rows}
-function debtJan1(schedule,year,initial){const prior=schedule.filter(r=>r.year<year).at(-1);return prior?prior.balanceEnd:initial}
+function debtJan1(schedule,year,initial){return debtStartOfMonth(schedule,year,1,initial)}
 function debtEoy(schedule,year,initial){const prior=schedule.filter(r=>r.year<=year).at(-1);return prior?prior.balanceEnd:initial}
-function ltValue(m,year,sold){return sold?0:m.ltPropertyValue*Math.pow(1+m.ltAppreciation,year-m.projectionStartYear+1)}
-function amsValue(m,purchaseYear,year,owned){return owned&&year>=purchaseYear?m.amsPrice*Math.pow(1+m.amsAppreciation,year-purchaseYear+1):0}
+function debtStartOfMonth(schedule,year,month,initial){
+  const prior=schedule.filter(r=>r.year<year||(r.year===year&&r.month<month)).at(-1);
+  return prior?prior.balanceEnd:initial;
+}
+function ltValueAtMonth(m,year,month,sold){
+  if(sold) return 0;
+  const elapsedYears=(year-m.projectionStartYear)+(month-1)/12;
+  return m.ltPropertyValue*Math.pow(1+m.ltAppreciation,elapsedYears);
+}
+function ltValue(m,year,sold){return ltValueAtMonth(m,year,13,sold)}
+function spendFromEtf(currentEtf,amount){
+  const spend=Math.max(0,amount);
+  if(spend<=currentEtf) return {etf:currentEtf-spend,shortfall:0};
+  return {etf:0,shortfall:spend-currentEtf};
+}
 function etfContribution(m,year,month){return m.etfContributions.reduce((s,c)=>{if(c.amount<=0||year<c.startYear||year>c.endYear)return s;if(c.frequency==="Monthly")return s+c.amount;if(c.frequency==="Yearly"&&c.month===month)return s+c.amount;return s},0)}
 function etfLump(m,year,month){return (m.lumpContributions||[]).filter(x=>x.destination==="ETF"&&x.year===year&&x.month===month).reduce((s,x)=>s+x.amount,0)}
 function effectiveAllowance(m){return m.hasFiscalPartner?BOX3_2025_PARTNER_ALLOWANCE:m.box3Allowance}
 function effectiveDebtThreshold(m){return m.hasFiscalPartner?BOX3_2025_PARTNER_DEBT_THRESHOLD:m.debtThreshold}
 function box3Tax(m,etf,ltDebt,ltTaxValue,sold){const deductible=sold?0:Math.max(0,ltDebt-effectiveDebtThreshold(m)),assets=etf+(sold?0:ltTaxValue),base=Math.max(0,assets-deductible),taxable=Math.max(0,base-effectiveAllowance(m)),share=base>0?Math.round((taxable/base)*10000)/10000:0,totalRet=assets*m.otherAssetsReturn-deductible*m.debtReturn,income=Math.max(0,totalRet*share),before=income*m.box3TaxRate,foreignRet=sold?0:ltTaxValue*m.otherAssetsReturn-deductible*m.debtReturn,foreignIncome=Math.max(0,foreignRet*share),relief=income>0?before*Math.min(1,Math.max(0,foreignIncome/income)):0;return Math.max(0,before-relief)}
 
-function estimateScenarioAPurchaseYear(m){const ltSchedule=buildLtSchedule(m),sc=m.scenarios.A;let etf=m.etfStartingValue,monthlyEtf=Math.pow(1+m.etfGrossReturn,1/12)-1;for(let year=m.projectionStartYear;year<=m.projectionEndYear;year++){const debt=debtJan1(ltSchedule,year,m.ltLoanAmount);if(year>=sc.earliestPurchaseYear&&year<=sc.maxWaitYear){const available=(sc.useEtf?etf:0)+sc.extraCash;if(available>=debt)return year}for(let mo=1;mo<=12;mo++){etf+=etfContribution(m,year,mo)+etfLump(m,year,mo);etf+=etf*monthlyEtf}}return null}
-
+function estimateScenarioAPurchasePoint(m){
+  const ltSchedule=buildLtSchedule(m),sc=m.scenarios.A;
+  let etf=m.etfStartingValue,monthlyEtf=Math.pow(1+m.etfGrossReturn,1/12)-1;
+  for(let year=m.projectionStartYear;year<=m.projectionEndYear;year++){
+    const debtJan=debtJan1(ltSchedule,year,m.ltLoanAmount);
+    const tax=box3Tax(m,etf,debtJan,m.ltPropertyValue,false);
+    etf=Math.max(0,etf-tax);
+    for(let mo=1;mo<=12;mo++){
+      etf+=etfContribution(m,year,mo)+etfLump(m,year,mo);
+      if(year>=sc.earliestPurchaseYear&&year<=sc.maxWaitYear){
+        const debt=debtStartOfMonth(ltSchedule,year,mo,m.ltLoanAmount);
+        const available=(sc.useEtf?etf:0)+sc.extraCash;
+        if(available>=debt) return {year,month:mo};
+      }
+      etf+=etf*monthlyEtf;
+    }
+  }
+  return null;
+}
 function simulateScenario(m,key){
   const ltSchedule=buildLtSchedule(m),monthlyEtf=Math.pow(1+m.etfGrossReturn,1/12)-1,sc=m.scenarios[key];
-  if(key==="A"){const dyn=estimateScenarioAPurchaseYear(m);sc.purchaseYear=dyn;sc.repayYear=dyn}
+  if(key==="A"){
+    const dyn=estimateScenarioAPurchasePoint(m);
+    sc.purchaseYear=dyn?dyn.year:null;
+    sc.purchaseMonth=dyn?dyn.month:null;
+    sc.repayYear=sc.purchaseYear;
+    sc.repayMonth=sc.purchaseMonth;
+  }
   let etf=m.etfStartingValue,ltSold=false,ltRepaid=false,amsOwned=false,amsSchedule=[],amsLoan=m.amsLoan,reservedDownpayment=0,shortfall=0,totalTax=0,rows=[];
   for(let year=m.projectionStartYear;year<=m.projectionEndYear;year++){
     const events=[];
     const ltDebtJ=ltSold||ltRepaid?0:debtJan1(ltSchedule,year,m.ltLoanAmount);
     const tax=box3Tax(m,etf,ltDebtJ,m.ltPropertyValue,ltSold);
-    totalTax+=tax; etf=Math.max(0,etf-tax);
+    totalTax+=tax;
+    const taxSpend=spendFromEtf(etf,tax);
+    etf=taxSpend.etf;
+    if(taxSpend.shortfall>0){shortfall+=taxSpend.shortfall;events.push(`Box 3 tax shortfall ${fmtEUR2.format(taxSpend.shortfall)}`)}
 
-    if(key==="A"&&sc.repayYear===null&&year===m.projectionEndYear&&!ltRepaid){shortfall+=debtJan1(ltSchedule,year,m.ltLoanAmount);events.push("LT repayment target not reached")}
-    if(key==="A"&&sc.repayYear!==null&&year===sc.repayYear&&!ltRepaid&&!ltSold){const debt=ltDebtJ,available=(sc.useEtf?etf:0)+sc.extraCash,pay=Math.min(debt,available);if(sc.useEtf)etf=Math.max(0,etf-Math.min(etf,pay));if(pay<debt)shortfall+=debt-pay;ltRepaid=true;events.push(`LT repaid ${fmtEUR2.format(debt)}`);events.push(`AMS purchase year ${sc.purchaseYear}`)}
+    if(key==="A"&&sc.repayYear===null&&year===m.projectionEndYear&&!ltRepaid){
+      shortfall+=debtJan1(ltSchedule,year,m.ltLoanAmount);
+      events.push("2nd repayment target not reached");
+    }
 
-    if((key==="B"||key==="D")&&year===sc.saleYear&&!ltSold){const saleValue=ltValue(m,year,false),debt=ltDebtJ,cost=saleValue*sc.saleCostsPct,proceeds=Math.max(0,saleValue-debt-cost-sc.motherReserve);ltSold=true;if(key==="B"&&sc.allocate==="Amsterdam downpayment"){reservedDownpayment+=proceeds;events.push(`LT sold; reserved for AMS downpayment ${fmtEUR2.format(proceeds)}`)}else{etf+=proceeds;events.push(`LT sold; proceeds to ETF ${fmtEUR2.format(proceeds)}`)}}
-
-    if((key==="A"||key==="B")&&year===sc.purchaseYear&&!amsOwned){amsOwned=true;const down=Math.min(reservedDownpayment,m.amsLoan);amsLoan=Math.max(0,m.amsLoan-down);reservedDownpayment=Math.max(0,reservedDownpayment-down);amsSchedule=buildAmsSchedule(m,year,amsLoan);etf=Math.max(0,etf-m.amsCosts);events.push(`Amsterdam purchased; mortgage ${fmtEUR2.format(amsLoan)}`)}
-
-    let contrib=0,growth=0;
     for(let mo=1;mo<=12;mo++){
       const add=etfContribution(m,year,mo)+etfLump(m,year,mo);
-      if(add>0){etf+=add;contrib+=add}
-      if(amsOwned){const netCost=m.ownershipCosts-m.rentAvoided;if(netCost>0)etf=Math.max(0,etf-netCost);else etf+=Math.abs(netCost)}
-      const g=etf*monthlyEtf;etf+=g;growth+=g;
+      if(add>0) etf+=add;
+
+      if(key==="A"&&sc.repayYear!==null&&year===sc.repayYear&&mo===sc.repayMonth&&!ltRepaid&&!ltSold){
+        const debt=debtStartOfMonth(ltSchedule,year,mo,m.ltLoanAmount);
+        const available=(sc.useEtf?etf:0)+sc.extraCash;
+        const pay=Math.min(debt,available);
+        if(sc.useEtf){
+          const usedFromEtf=Math.min(etf,pay);
+          etf-=usedFromEtf;
+        }
+        if(pay<debt){shortfall+=debt-pay;events.push(`2nd repayment shortfall ${fmtEUR2.format(debt-pay)}`)}
+        ltRepaid=true;
+        events.push(`2nd mortgage repaid ${fmtEUR2.format(debt)} in ${year}-${String(mo).padStart(2,"0")}`);
+      }
+
+      if((key==="B"||key==="D")&&year===sc.saleYear&&mo===sc.saleMonth&&!ltSold){
+        const saleValue=ltValueAtMonth(m,year,mo,false);
+        const debt=debtStartOfMonth(ltSchedule,year,mo,m.ltLoanAmount);
+        const cost=saleValue*sc.saleCostsPct;
+        const proceeds=Math.max(0,saleValue-debt-cost-sc.motherReserve);
+        ltSold=true;
+        if(key==="B"&&sc.allocate==="NL property downpayment"&&!amsOwned){
+          reservedDownpayment+=proceeds;
+          events.push(`2nd property sold in ${year}-${String(mo).padStart(2,"0")}; reserved for NL property downpayment ${fmtEUR2.format(proceeds)}`);
+        }else{
+          etf+=proceeds;
+          events.push(`2nd property sold in ${year}-${String(mo).padStart(2,"0")}; proceeds to ETF ${fmtEUR2.format(proceeds)}`);
+        }
+      }
+
+      if((key==="A"||key==="B")&&year===sc.purchaseYear&&mo===(sc.purchaseMonth||1)&&!amsOwned){
+        amsOwned=true;
+        const down=Math.min(reservedDownpayment,m.amsLoan);
+        amsLoan=Math.max(0,m.amsLoan-down);
+        const excess=Math.max(0,reservedDownpayment-down);
+        if(excess>0){etf+=excess;events.push(`Excess downpayment moved to ETF ${fmtEUR2.format(excess)}`)}
+        reservedDownpayment=0;
+        amsSchedule=buildAmsSchedule(m,year,amsLoan);
+        const costSpend=spendFromEtf(etf,m.amsCosts);
+        etf=costSpend.etf;
+        if(costSpend.shortfall>0){shortfall+=costSpend.shortfall;events.push(`Purchase cost shortfall ${fmtEUR2.format(costSpend.shortfall)}`)}
+        events.push(`NL property purchased; mortgage ${fmtEUR2.format(amsLoan)}`);
+      }
+
+      if(amsOwned){
+        const monthlyImpact=m.rentAvoided-m.amsNetMortgagePayment-m.ownershipCosts;
+        if(monthlyImpact>=0) etf+=monthlyImpact;
+        else {
+          const cfSpend=spendFromEtf(etf,-monthlyImpact);
+          etf=cfSpend.etf;
+          if(cfSpend.shortfall>0){shortfall+=cfSpend.shortfall;events.push(`Housing cashflow shortfall ${fmtEUR2.format(cfSpend.shortfall)}`)}
+        }
+      }
+
+      const g=etf*monthlyEtf;
+      etf+=g;
     }
 
     const ltDebt=ltSold||ltRepaid?0:debtEoy(ltSchedule,year,m.ltLoanAmount);
@@ -115,14 +235,15 @@ function simulateScenario(m,key){
     const amsVal=amsValue(m,sc.purchaseYear||year,year,amsOwned);
     const amsEquity=Math.max(0,amsVal-amsDebt);
     const total=etf+ltEquity+amsEquity+reservedDownpayment;
-    const real=total/Math.pow(1+m.personalInflation,year-m.projectionStartYear+1);
+    const futureInflation=inputPct("inflationFutureRate")||m.personalInflation||0.033;
+    const inflationFactor=calculateInflationFactor(m.projectionStartYear,year,futureInflation);
+    const real=total/inflationFactor;
     rows.push({year,etf,ltMarketValue:ltMarket,ltDebt,ltEquity,amsValue:amsVal,amsDebt,amsEquity,totalNetWorth:total,realNetWorth:real,box3Tax:tax,events:events.join("; ")});
   }
   const last=rows.at(-1);
-  let comment=key==="C"?"Baseline; may not satisfy borrowing capacity":key==="B"?"Conditional on mother housing / sale feasibility":key==="D"?"Sell LT, invest proceeds into ETF, no AMS":shortfall>0?"No year found where liquidity can fully repay LT debt within max wait year":`Dynamic repayment/purchase year: ${sc.purchaseYear}`;
+  let comment=key==="C"?"Baseline; may not satisfy Dutch borrowing capacity":key==="B"?"Conditional on mother housing / sale feasibility":key==="D"?"Sell LT, invest proceeds into ETF, no NL property":shortfall>0?"Scenario has liquidity shortfall(s)":`Dynamic repayment/purchase: ${sc.purchaseYear}-${String(sc.purchaseMonth||1).padStart(2,"0")}`;
   return {key,label:scenarioDefs.find(s=>s.key===key).label,rows,final:last,totalBox3Tax:totalTax,liquidityShortfall:shortfall,feasible:shortfall<=0,comment};
 }
-
 function simulateAll(){const model=readModel();return{model,scenarios:{A:simulateScenario(model,"A"),B:simulateScenario(model,"B"),C:simulateScenario(model,"C"),D:simulateScenario(model,"D")}}}
 
 function formatCurrency(value){const rate=fxRates[summaryCurrency]||1;return new Intl.NumberFormat("en-IE",{style:"currency",currency:summaryCurrency,maximumFractionDigits:0}).format(value*rate)}
@@ -130,6 +251,168 @@ function setFxStatus(msg){const el=document.getElementById("fxStatus");if(el)el.
 async function loadFxRates(){setFxStatus("Loading FX...");try{const r=await fetch("https://api.frankfurter.app/latest?from=EUR&to=USD",{cache:"no-store"});if(r.ok){const d=await r.json();if(d?.rates?.USD){fxRates.USD=d.rates.USD;fxMeta.USD=`ECB ${d.date||""}`.trim()}}}catch(e){console.warn("Frankfurter USD failed",e)}try{if(!fxRates.USD){const r=await fetch("https://open.er-api.com/v6/latest/EUR",{cache:"no-store"});if(r.ok){const d=await r.json();if(d?.rates?.USD){fxRates.USD=d.rates.USD;fxMeta.USD="fallback"}}}}catch(e){console.warn("USD fallback failed",e)}try{const r=await fetch("https://www.cbr-xml-daily.ru/daily_json.js",{cache:"no-store"});if(r.ok){const d=await r.json();if(d?.Valute?.EUR?.Value){fxRates.RUB=d.Valute.EUR.Value;fxMeta.RUB=`CBR ${String(d.Date||"").slice(0,10)}`.trim()}}}catch(e){console.warn("CBR RUB failed",e)}updateFxStatus();if(window.__lastResult)renderSummary(window.__lastResult)}
 function updateFxStatus(){if(summaryCurrency==="EUR"){setFxStatus("EUR base");return}const rate=fxRates[summaryCurrency];if(!rate){setFxStatus(`${summaryCurrency} rate unavailable`);return}setFxStatus(`1 EUR = ${rate.toFixed(summaryCurrency==="RUB"?2:4)} ${summaryCurrency}${fxMeta[summaryCurrency]?" · "+fxMeta[summaryCurrency]:""}`)}
 function setupCurrencyToggle(){document.querySelectorAll("#summaryCurrencyToggle .segment").forEach(b=>b.onclick=()=>{summaryCurrency=b.dataset.currency;document.querySelectorAll("#summaryCurrencyToggle .segment").forEach(x=>x.classList.remove("active"));b.classList.add("active");updateFxStatus();if(window.__lastResult)renderSummary(window.__lastResult)})}
+
+
+const STORED_COMPARE_KEY = "scenarioCalculatorStoredComparisonV1";
+
+function getCurrentSummarySnapshot(result) {
+  const scenarios = Object.values(result.scenarios || {});
+  const rows = [];
+
+  scenarios.forEach(s => {
+    const r = s.final || {};
+    const prefix = s.label || s.key;
+
+    rows.push(
+      { key: `${s.key}.finalEtf`, label: `${prefix} · Final ETF`, value: r.etf || 0, type: "higher" },
+      { key: `${s.key}.ltEquity`, label: `${prefix} · 2nd property equity`, value: r.ltEquity || 0, type: "higher" },
+      { key: `${s.key}.amsEquity`, label: `${prefix} · NL property equity`, value: r.amsEquity || 0, type: "higher" },
+      { key: `${s.key}.totalNetWorth`, label: `${prefix} · Total net worth`, value: r.totalNetWorth || 0, type: "higher" },
+      { key: `${s.key}.realNetWorth`, label: `${prefix} · Inflation-adjusted net worth`, value: r.realNetWorth || 0, type: "higher" },
+      { key: `${s.key}.totalBox3Tax`, label: `${prefix} · Total Box 3 tax`, value: s.totalBox3Tax || 0, type: "lower" },
+      { key: `${s.key}.liquidityShortfall`, label: `${prefix} · Liquidity shortfall`, value: s.liquidityShortfall || 0, type: "lower" }
+    );
+  });
+
+  try {
+    if (typeof calculatePensionFromResult === "function") {
+      const pension = calculatePensionFromResult(result);
+      rows.push(
+        { key: "pension.etfBase", label: "Pension · ETF base at EOY 2053", value: pension.etfBase || 0, type: "higher" },
+        { key: "pension.annualEtfIncome", label: "Pension · Annual ETF income net", value: pension.annualEtfIncome || 0, type: "higher" },
+        { key: "pension.monthlyFuture", label: "Pension · Monthly income future EUR", value: pension.monthlyFuture || 0, type: "higher" },
+        { key: "pension.monthlyToday", label: "Pension · Monthly income today's EUR", value: pension.monthlyToday || 0, type: "higher" },
+        { key: "pension.inflationFactor", label: "Pension · Inflation factor to 2054", value: pension.inflationFactor || 0, type: "lower", format: "factor" }
+      );
+    }
+  } catch (error) {
+    console.warn("Pension comparison snapshot failed", error);
+  }
+
+  try {
+    const inflationFactorText = document.getElementById("inflationFactor")?.textContent || "";
+    const inflationFactor = Number(inflationFactorText.replace("x", ""));
+    if (Number.isFinite(inflationFactor) && inflationFactor > 0) {
+      rows.push({ key: "inflation.factor", label: "Inflation calculator · Cumulative inflation factor", value: inflationFactor, type: "lower", format: "factor" });
+    }
+  } catch (error) {
+    console.warn("Inflation comparison snapshot failed", error);
+  }
+
+  return {
+    createdAt: new Date().toISOString(),
+    currency: summaryCurrency,
+    rows,
+  };
+}
+
+function readStoredComparison() {
+  try {
+    const raw = localStorage.getItem(STORED_COMPARE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.warn("Could not read stored comparison", error);
+    return null;
+  }
+}
+
+function storeCurrentComparison() {
+  if (!window.__lastResult) return;
+  const snapshot = getCurrentSummarySnapshot(window.__lastResult);
+  try {
+    localStorage.setItem(STORED_COMPARE_KEY, JSON.stringify(snapshot));
+    renderStoredComparison(window.__lastResult);
+  } catch (error) {
+    console.error("Could not store comparison", error);
+    alert("Could not store comparison in localStorage.");
+  }
+}
+
+function clearStoredComparison() {
+  try {
+    localStorage.removeItem(STORED_COMPARE_KEY);
+  } catch (_) {}
+  const block = document.getElementById("storedComparisonBlock");
+  if (block) block.classList.add("hidden");
+}
+
+function formatCompareValue(row, value) {
+  if (row.format === "factor") return `${Number(value || 0).toFixed(3)}x`;
+  return formatCurrency(value || 0);
+}
+
+function formatCompareDiff(row, diff) {
+  const sign = diff > 0 ? "+" : "";
+  if (row.format === "factor") return `${sign}${Number(diff || 0).toFixed(3)}x`;
+  return `${sign}${formatCurrency(diff || 0)}`;
+}
+
+function classifyDiff(row, diff) {
+  const epsilon = row.format === "factor" ? 0.0005 : 0.5;
+  if (Math.abs(diff) < epsilon) return "diff-neutral";
+
+  if (row.type === "lower") return diff < 0 ? "diff-good" : "diff-bad";
+  return diff > 0 ? "diff-good" : "diff-bad";
+}
+
+function renderStoredComparison(result) {
+  const stored = readStoredComparison();
+  const block = document.getElementById("storedComparisonBlock");
+  const tbody = document.querySelector("#storedComparisonTable tbody");
+  const meta = document.getElementById("storedComparisonMeta");
+
+  if (!block || !tbody) return;
+
+  if (!stored || !stored.rows) {
+    block.classList.add("hidden");
+    tbody.innerHTML = "";
+    return;
+  }
+
+  const current = getCurrentSummarySnapshot(result);
+  const currentByKey = new Map(current.rows.map(r => [r.key, r]));
+  tbody.innerHTML = "";
+
+  stored.rows.forEach(storedRow => {
+    const currentRow = currentByKey.get(storedRow.key);
+    if (!currentRow) return;
+
+    const storedValue = Number(storedRow.value || 0);
+    const currentValue = Number(currentRow.value || 0);
+    const diff = currentValue - storedValue;
+    const rowMeta = { ...storedRow, ...currentRow };
+
+    const tr = tbody.insertRow();
+    const values = [
+      rowMeta.label,
+      formatCompareValue(rowMeta, storedValue),
+      formatCompareValue(rowMeta, currentValue),
+      formatCompareDiff(rowMeta, diff),
+    ];
+
+    values.forEach((value, index) => {
+      const td = tr.insertCell();
+      td.textContent = value;
+      if (index === 0) td.style.textAlign = "left";
+      if (index === 3) td.className = classifyDiff(rowMeta, diff);
+    });
+  });
+
+  block.classList.remove("hidden");
+
+  if (meta) {
+    const d = stored.createdAt ? new Date(stored.createdAt) : null;
+    meta.textContent = d ? `Stored ${d.toLocaleString()}` : "Stored comparison";
+  }
+}
+
+function setupStoredComparison() {
+  const storeButton = document.getElementById("storeCompare");
+  const clearButton = document.getElementById("clearStoredCompare");
+
+  if (storeButton) storeButton.addEventListener("click", storeCurrentComparison);
+  if (clearButton) clearButton.addEventListener("click", clearStoredComparison);
+}
 
 function renderSummary(res){
   const body=document.querySelector("#summaryTable tbody");body.innerHTML="";
@@ -163,7 +446,6 @@ function calculatePensionFromResult(result) {
   const scenarioKey = document.getElementById("pensionScenario")?.value || "A";
   const scenario = result?.scenarios?.[scenarioKey];
   const row2053 = getYearRow(scenario, 2053);
-  const finalRow = scenario?.rows?.at(-1);
   const model = result?.model || readModel();
 
   const basePensionAnnual = document.getElementById("pensionHigherBase")?.checked ? 34320 : 22584;
@@ -172,37 +454,39 @@ function calculatePensionFromResult(result) {
 
   let etfBase = row2053?.etf || 0;
   let ltSaleProceeds = 0;
-  let sellDisabled = false;
   let note = "";
 
   const selectedScenarioAlreadySoldLt = row2053 ? row2053.ltMarketValue <= 0 && row2053.ltDebt <= 0 : false;
   if (sellLtToggle) {
-    sellDisabled = selectedScenarioAlreadySoldLt;
-    sellLtToggle.disabled = sellDisabled;
-    if (sellDisabled) sellLtToggle.checked = false;
+    sellLtToggle.disabled = selectedScenarioAlreadySoldLt;
+    if (selectedScenarioAlreadySoldLt) sellLtToggle.checked = false;
   }
+
+  let ltSoldForTax = selectedScenarioAlreadySoldLt;
+  let ltDebtForTax = row2053?.ltDebt || 0;
+  let ltTaxValueForTax = ltSoldForTax ? 0 : model.ltPropertyValue;
 
   if (!row2053) {
     note = "Projection does not reach 2053. Increase projection years so the pension section can use EOY 2053 ETF value.";
   } else if (sellLtToggle?.checked && !selectedScenarioAlreadySoldLt) {
     ltSaleProceeds = Math.max(0, (row2053.ltMarketValue || 0) - (row2053.ltDebt || 0));
     etfBase += ltSaleProceeds;
-    note = `Scenario ${scenarioKey}: remaining LT property is sold at EOY 2053 and net equity is added to ETF.`;
+    ltSoldForTax = true;
+    ltDebtForTax = 0;
+    ltTaxValueForTax = 0;
+    note = `Scenario ${scenarioKey}: remaining 2nd property is sold at EOY 2053 and net equity is added to ETF.`;
   } else if (selectedScenarioAlreadySoldLt) {
-    note = `Scenario ${scenarioKey}: LT property is already sold before / by 2053, so the LT sale toggle is disabled.`;
+    note = `Scenario ${scenarioKey}: 2nd property is already sold before / by 2053, so the LT sale toggle is disabled.`;
   } else {
-    note = `Scenario ${scenarioKey}: LT property is retained for pension calculation unless the sale toggle is enabled.`;
+    note = `Scenario ${scenarioKey}: 2nd property is retained for pension calculation unless the sale toggle is enabled.`;
   }
 
-  const annualEtfIncome = etfBase * conservativeReturn;
+  const grossEtfIncome = etfBase * conservativeReturn;
+  const annualBox3Tax = box3Tax(model, etfBase, ltDebtForTax, ltTaxValueForTax, ltSoldForTax);
+  const annualEtfIncome = Math.max(0, grossEtfIncome - annualBox3Tax);
   const totalAnnualFuture = basePensionAnnual + annualEtfIncome;
   const monthlyFuture = totalAnnualFuture / 12;
 
-  /*
-    Use the same inflation engine as the Inflation calculator.
-    This keeps "Inflation factor to 2054" aligned with the Inflation calculator
-    when its Start year = projection start year and Target year = 2054.
-  */
   const inflationStartYear = Math.round(inputNumber("inflationStartYear")) || model.projectionStartYear;
   const inflationFutureRate = inputPct("inflationFutureRate") || model.personalInflation || 0.033;
   const inflationFactor = calculateInflationFactor(inflationStartYear, 2054, inflationFutureRate);
@@ -216,6 +500,8 @@ function calculatePensionFromResult(result) {
     etfBase,
     ltSaleProceeds,
     conservativeReturn,
+    grossEtfIncome,
+    annualBox3Tax,
     annualEtfIncome,
     totalAnnualFuture,
     monthlyFuture,
@@ -235,6 +521,7 @@ function renderPension(result) {
 
   set("pensionEtfBase", fmtEUR.format(p.etfBase));
   set("pensionEtfIncomeAnnual", fmtEUR.format(p.annualEtfIncome));
+  set("pensionBox3Tax", fmtEUR.format(p.annualBox3Tax));
   set("pensionMonthlyFuture", fmtEUR.format(p.monthlyFuture));
   set("pensionMonthlyToday", fmtEUR.format(p.monthlyToday));
   set("pensionLtSaleProceeds", fmtEUR.format(p.ltSaleProceeds));
@@ -242,18 +529,18 @@ function renderPension(result) {
 
   const noteEl = document.getElementById("pensionNote");
   if (noteEl) {
-    noteEl.textContent = `${p.note} Pension base: ${fmtEUR.format(p.basePensionAnnual)}/year AOW + employer pension plus ${(p.conservativeReturn * 100).toFixed(1)}% ETF income.`;
+    noteEl.textContent = `${p.note} Pension base: ${fmtEUR.format(p.basePensionAnnual)}/year AOW + employer pension plus ${(p.conservativeReturn * 100).toFixed(1)}% gross ETF return minus estimated Box 3 tax.`;
   }
 }
 
-function render(res){renderSummary(res);renderDetails(res);renderChart(res);renderPension(res);renderInflationCalculator()}
+function render(res){renderSummary(res);renderDetails(res);renderChart(res);renderPension(res);renderStoredComparison(res);renderInflationCalculator()}
 function calculate(){try{const res=simulateAll();window.__lastResult=res;render(res)}catch(e){console.error(e)}}
-function downloadCsv(){const res=window.__lastResult||simulateAll(),rows=[["Scenario","Year","ETF","LT value","LT debt","LT equity","AMS value","AMS debt","AMS equity","Total net worth","Real net worth","Box 3 tax","Events"]];Object.values(res.scenarios).forEach(s=>s.rows.forEach(r=>rows.push([s.label,r.year,r.etf.toFixed(2),r.ltMarketValue.toFixed(2),r.ltDebt.toFixed(2),r.ltEquity.toFixed(2),r.amsValue.toFixed(2),r.amsDebt.toFixed(2),r.amsEquity.toFixed(2),r.totalNetWorth.toFixed(2),r.realNetWorth.toFixed(2),r.box3Tax.toFixed(2),r.events])));const csv=rows.map(row=>row.map(x=>`"${String(x).replaceAll('"','""')}"`).join(",")).join("\n"),blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="scenario_comparison.csv";a.click();URL.revokeObjectURL(url)}
+function downloadCsv(){const res=window.__lastResult||simulateAll(),rows=[["Scenario","Year","ETF","LT value","2nd mortgage debt","2nd property equity","NL property value","NL property debt","NL property equity","Total net worth","Real net worth","Box 3 tax","Events"]];Object.values(res.scenarios).forEach(s=>s.rows.forEach(r=>rows.push([s.label,r.year,r.etf.toFixed(2),r.ltMarketValue.toFixed(2),r.ltDebt.toFixed(2),r.ltEquity.toFixed(2),r.amsValue.toFixed(2),r.amsDebt.toFixed(2),r.amsEquity.toFixed(2),r.totalNetWorth.toFixed(2),r.realNetWorth.toFixed(2),r.box3Tax.toFixed(2),r.events])));const csv=rows.map(row=>row.map(x=>`"${String(x).replaceAll('"','""')}"`).join(",")).join("\n"),blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="scenario_comparison.csv";a.click();URL.revokeObjectURL(url)}
 function applyFiscalPartnerDefaults(){const p=document.getElementById("hasFiscalPartner"),a=document.getElementById("box3Allowance"),d=document.getElementById("debtThreshold");if(!p||!a||!d)return;if(p.checked){a.value=BOX3_2025_PARTNER_ALLOWANCE;d.value=BOX3_2025_PARTNER_DEBT_THRESHOLD}else{a.value=BOX3_2025_SINGLE_ALLOWANCE;d.value=BOX3_2025_SINGLE_DEBT_THRESHOLD}}
 function applyTheme(theme){document.body.classList.toggle("dark",theme==="dark");const t=document.getElementById("themeToggle");if(t)t.checked=theme==="dark";try{localStorage.setItem("calculatorTheme",theme)}catch(e){}}
 function initTheme(){let stored="light";try{stored=localStorage.getItem("calculatorTheme")||"light"}catch(e){}applyTheme(stored);const t=document.getElementById("themeToggle");if(t)t.onchange=()=>applyTheme(t.checked?"dark":"light")}
 function clearTableHighlights(table){table.querySelectorAll(".col-hover,.cell-hover,.header-hover").forEach(el=>el.classList.remove("col-hover","cell-hover","header-hover"))}
 function setupTableHeaderHover(){document.querySelectorAll("table").forEach(table=>{table.addEventListener("mouseover",e=>{const th=e.target.closest("th");if(!th||!table.contains(th))return;clearTableHighlights(table);const idx=th.cellIndex;th.classList.add("header-hover");Array.from(table.rows).forEach(row=>{const cell=row.cells[idx];if(cell)cell.classList.add("col-hover")})});table.addEventListener("mouseout",e=>{if(!e.relatedTarget||!table.contains(e.relatedTarget))clearTableHighlights(table)})})}
 function setupTabs(){document.querySelectorAll(".tab-button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab-button").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab-panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active")});document.querySelectorAll(".detail-tab-button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".detail-tab-button").forEach(x=>x.classList.remove("active"));b.classList.add("active");activeDetailScenario=b.dataset.detail;if(window.__lastResult)renderDetails(window.__lastResult)})}
-function init(){initTheme();addRateRow({effectiveFrom:"2025-08-25",euribor:2.08});addRateRow({effectiveFrom:"2026-01-01",euribor:2.12});addEtfContributionRow({amount:10000,frequency:"Yearly",month:1,startYear:2026,endYear:2028});addEtfContributionRow({amount:16500,frequency:"Yearly",month:1,startYear:2029,endYear:2045});addLumpContributionRow({amount:0,year:2026,month:1,destination:"LT repayment",description:"optional"});document.querySelectorAll("input,select").forEach(el=>{el.addEventListener("input",calculate);el.addEventListener("change",calculate)});document.getElementById("hasFiscalPartner").addEventListener("change",()=>{applyFiscalPartnerDefaults();calculate()});document.getElementById("personalInflation").addEventListener("input",()=>{calculate()});document.getElementById("addRateRow").onclick=()=>{addRateRow();calculate()};document.getElementById("addEtfContribution").onclick=()=>{addEtfContributionRow();calculate()};document.getElementById("addLumpContribution").onclick=()=>{addLumpContributionRow();calculate()};document.getElementById("downloadCsv").onclick=downloadCsv;window.addEventListener("resize",()=>{if(window.__lastResult)renderChart(window.__lastResult)});setupTabs();renderChartControls();setupTableHeaderHover();setupCurrencyToggle();applyFiscalPartnerDefaults();calculate();loadFxRates()}
+function init(){initTheme();addRateRow({effectiveFrom:"2025-08-25",euribor:2.08});addRateRow({effectiveFrom:"2026-01-01",euribor:2.12});addEtfContributionRow({amount:10000,frequency:"Yearly",month:1,startYear:2026,endYear:2028});addEtfContributionRow({amount:16500,frequency:"Yearly",month:1,startYear:2029,endYear:2045});addLumpContributionRow({amount:0,year:2026,month:1,destination:"2nd repayment",description:"optional"});document.querySelectorAll("input,select").forEach(el=>{el.addEventListener("input",calculate);el.addEventListener("change",calculate)});document.getElementById("hasFiscalPartner").addEventListener("change",()=>{applyFiscalPartnerDefaults();calculate()});document.getElementById("personalInflation").addEventListener("input",()=>{calculate()});document.getElementById("addRateRow").onclick=()=>{addRateRow();calculate()};document.getElementById("addEtfContribution").onclick=()=>{addEtfContributionRow();calculate()};document.getElementById("addLumpContribution").onclick=()=>{addLumpContributionRow();calculate()};document.getElementById("downloadCsv").onclick=downloadCsv;window.addEventListener("resize",()=>{if(window.__lastResult)renderChart(window.__lastResult)});setupTabs();renderChartControls();setupTableHeaderHover();setupCurrencyToggle();applyFiscalPartnerDefaults();calculate();loadFxRates()}
 init();

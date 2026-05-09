@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Scenario Comparison Calculator</title>
+  <title>Property & Retirement Scenario Calculator</title>
   <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
 <main class="container">
 <header class="top-header">
   <div>
-    <h1>Scenario Comparison Calculator</h1>
-    <p class="muted">Compare LT property, Amsterdam purchase, ETF compounding, Box 3 tax, currency view, and inflation-adjusted outcomes.</p>
+    <h1>Property & Retirement Scenario Calculator</h1>
+    <p class="muted">Compare second-property-abroad strategies, Dutch home purchase options, ETF compounding, Box 3 tax, retirement income, and inflation-adjusted outcomes.</p>
   </div>
   <label class="switch-control theme-switch" title="Switch theme">
     <span class="switch-label">Light</span>
@@ -27,7 +27,8 @@
 <h3>Timeline & ETF</h3>
 <div class="grid">
 <label>Projection start year <input id="projectionStartYear" type="number" value="2025"/></label>
-<label>Projection years <input id="projectionYears" type="number" value="29"/></label>
+<label>Retirement year <input id="retirementYear" type="number" value="2053"/></label>
+<label>Calculated projection years <input id="projectionYears" type="number" value="29" readonly/></label>
 <label>ETF value on Jan 1 start year (EUR) <input id="etfStartingValue" type="number" value="0"/></label>
 <label>ETF gross annualized return (%) <input id="etfGrossReturn" type="number" value="10" step="0.1"/></label>
 <label>Personal inflation / spending inflation (%) <input id="personalInflation" type="number" value="3.3" step="0.1"/></label>
@@ -51,34 +52,35 @@
 </div>
 <p class="note">Fiscal partner uses 2025 joint Box 3 allowance (EUR 115,368) and joint debt threshold (EUR 7,600), allocated fully to your side.</p>
 
-<h3>LT property & mortgage</h3>
+<h3>2nd property abroad & mortgage</h3>
 <div class="grid">
-<label>LT purchase / tax value (EUR) <input id="ltPropertyValue" type="number" value="204000"/></label>
-<label>LT initial equity (EUR) <input id="ltDownpayment" type="number" value="59250"/></label>
-<label>LT loan amount (EUR) <input id="ltLoanAmount" type="number" value="144750"/></label>
-<label>LT start date <input id="ltStartDate" type="date" value="2025-08-25"/></label>
-<label>LT first payment <input id="ltFirstPayment" type="date" value="2025-09-08"/></label>
-<label>LT principal start <input id="ltPrincipalStart" type="date" value="2025-11-06"/></label>
-<label>LT payment day <input id="ltPaymentDay" type="number" value="6"/></label>
-<label>LT term months <input id="ltMonths" type="number" value="240"/></label>
-<label>LT margin over Euribor6M (%) <input id="ltMargin" type="number" value="1.57" step="0.01"/></label>
-<label>LT annual appreciation (%) <input id="ltAppreciation" type="number" value="3.6" step="0.1"/></label>
+<label>2nd purchase / tax value (EUR) <input id="ltPropertyValue" type="number" value="204000"/></label>
+<label>2nd initial equity (EUR) <input id="ltDownpayment" type="number" value="59250"/></label>
+<label>2nd loan amount (EUR) <input id="ltLoanAmount" type="number" value="144750"/></label>
+<label>2nd mortgage start date <input id="ltStartDate" type="date" value="2025-08-25"/></label>
+<label>2nd mortgage first payment <input id="ltFirstPayment" type="date" value="2025-09-08"/></label>
+<label>2nd mortgage principal start <input id="ltPrincipalStart" type="date" value="2025-11-06"/></label>
+<label>2nd mortgage payment day <input id="ltPaymentDay" type="number" value="6"/></label>
+<label>2nd mortgage term months <input id="ltMonths" type="number" value="240"/></label>
+<label>2nd mortgage margin over Euribor6M (%) <input id="ltMargin" type="number" value="1.57" step="0.01"/></label>
+<label>2nd property annual appreciation (%) <input id="ltAppreciation" type="number" value="3.6" step="0.1"/></label>
 </div>
 
-<h3>Amsterdam property & mortgage</h3>
+<h3>NL property & mortgage</h3>
 <div class="grid">
-<label>Amsterdam purchase price (EUR) <input id="amsPrice" type="number" value="650000"/></label>
-<label>Amsterdam mortgage amount (EUR) <input id="amsLoan" type="number" value="650000"/></label>
-<label>Amsterdam mortgage rate (%) <input id="amsRate" type="number" value="4.06" step="0.01"/></label>
-<label>Amsterdam term months <input id="amsMonths" type="number" value="360"/></label>
-<label>Amsterdam annual appreciation (%) <input id="amsAppreciation" type="number" value="5.0" step="0.1"/></label>
+<label>NL property purchase price (EUR) <input id="amsPrice" type="number" value="650000"/></label>
+<label>NL property mortgage amount (EUR) <input id="amsLoan" type="number" value="650000"/></label>
+<label>NL mortgage rate (%) <input id="amsRate" type="number" value="4.06" step="0.01"/></label>
+<label>NL property net mortgage payment/month (EUR) <input id="amsNetMortgagePayment" type="number" value="2400"/></label>
+<label>NL mortgage term months <input id="amsMonths" type="number" value="360"/></label>
+<label>NL property annual appreciation (%) <input id="amsAppreciation" type="number" value="5.0" step="0.1"/></label>
 <label>Purchase costs (EUR) <input id="amsCosts" type="number" value="25000"/></label>
 <label>Monthly ownership costs (EUR) <input id="ownershipCosts" type="number" value="0"/></label>
 <label>Rent avoided (EUR / month) <input id="rentAvoided" type="number" value="2300"/></label>
 </div>
 
 <h3>Euribor6M schedule</h3>
-<div class="section-head"><p class="note">Used for the LT mortgage forecast.</p><button id="addRateRow" type="button">Add rate row</button></div>
+<div class="section-head"><p class="note">Used for the 2nd-property-abroad mortgage forecast.</p><button id="addRateRow" type="button">Add rate row</button></div>
 <div class="table-wrap"><table id="rateTable"><thead><tr><th>Effective from</th><th>Euribor6M (%)</th><th></th></tr></thead><tbody></tbody></table></div>
 
 <h3>ETF recurring contributions</h3>
@@ -86,54 +88,56 @@
 <div class="table-wrap"><table id="etfContributionTable"><thead><tr><th>Amount (EUR)</th><th>Frequency</th><th>Month</th><th>Start year</th><th>End year</th><th></th></tr></thead><tbody></tbody></table></div>
 
 <h3>Lump sum contributions</h3>
-<div class="section-head"><p class="note">One-off contributions. Choose ETF or LT mortgage repayment as destination.</p><button id="addLumpContribution" type="button">Add lump sum</button></div>
+<div class="section-head"><p class="note">One-off contributions. Choose ETF or 2nd mortgage repayment as destination.</p><button id="addLumpContribution" type="button">Add lump sum</button></div>
 <div class="table-wrap"><table id="lumpContributionTable"><thead><tr><th>Amount (EUR)</th><th>Year</th><th>Month</th><th>Destination</th><th>Description</th><th></th></tr></thead><tbody></tbody></table></div>
 </section>
 
 <section class="card">
 <h2>Scenario-specific assumptions</h2>
 <div class="tabs">
-<button class="tab-button active" data-tab="scenarioA" type="button">A. Repay LT + buy AMS</button>
-<button class="tab-button" data-tab="scenarioB" type="button">B. Sell LT + buy AMS</button>
-<button class="tab-button" data-tab="scenarioC" type="button">C. Keep LT + no AMS</button>
-<button class="tab-button" data-tab="scenarioD" type="button">D. Sell LT + ETF only</button>
+<button class="tab-button active" data-tab="scenarioA" type="button">A. Repay 2nd mortgage + buy NL property</button>
+<button class="tab-button" data-tab="scenarioB" type="button">B. Sell 2nd property + buy NL property</button>
+<button class="tab-button" data-tab="scenarioC" type="button">C. Keep 2nd property + no NL property</button>
+<button class="tab-button" data-tab="scenarioD" type="button">D. Sell 2nd property + ETF only</button>
 </div>
 
 <div id="scenarioA" class="tab-panel active">
-<h3>A. Repay LT mortgage fully + buy Amsterdam</h3>
+<h3>A. Repay 2nd mortgage fully + buy NL property</h3>
 <div class="grid">
-<label>Use ETF to repay LT debt <select id="aUseEtf"><option value="yes" selected>yes</option><option value="no">no</option></select></label>
+<label>Use ETF to repay 2nd mortgage debt <select id="aUseEtf"><option value="yes" selected>yes</option><option value="no">no</option></select></label>
 <label>Extra cash available for repayment (EUR) <input id="aExtraCash" type="number" value="0"/></label>
 <label>Earliest allowed purchase year <input id="aEarliestPurchaseYear" type="number" value="2026"/></label>
 <label>Maximum wait year <input id="aMaxWaitYear" type="number" value="2045"/></label>
 </div>
-<p class="note">Scenario A dynamically finds the earliest year when ETF + extra cash can fully repay the LT mortgage. LT repayment and Amsterdam purchase happen in that same year.</p>
+<p class="note">Scenario A dynamically finds the earliest year when ETF + extra cash can fully repay the 2nd mortgage. 2nd-mortgage repayment and NL property purchase happen in that same year.</p>
 </div>
 
 <div id="scenarioB" class="tab-panel">
-<h3>B. Sell LT property + buy Amsterdam</h3>
+<h3>B. Sell 2nd property + buy NL property</h3>
 <div class="grid">
-<label>LT sale year <input id="bSaleYear" type="number" value="2035"/></label>
-<label>Amsterdam purchase year <input id="bPurchaseYear" type="number" value="2035"/></label>
-<label>LT sale costs (% sale price) <input id="bSaleCostsPct" type="number" value="0" step="0.1"/></label>
+<label>2nd property sale year <input id="bSaleYear" type="number" value="2035"/></label>
+<label>2nd property sale month <input id="bSaleMonth" type="number" value="1" min="1" max="12"/></label>
+<label>NL property purchase year <input id="bPurchaseYear" type="number" value="2035"/></label>
+<label>2nd property sale costs (% sale price) <input id="bSaleCostsPct" type="number" value="0" step="0.1"/></label>
 <label>Mother housing reserve (EUR) <input id="bMotherReserve" type="number" value="0"/></label>
-<label>Allocate net proceeds <select id="bAllocate"><option value="ETF" selected>ETF</option><option value="Amsterdam downpayment">Amsterdam downpayment</option></select></label>
+<label>Allocate net proceeds <select id="bAllocate"><option value="ETF" selected>ETF</option><option value="NL property downpayment">NL property downpayment</option></select></label>
 </div>
 </div>
 
 <div id="scenarioC" class="tab-panel">
-<h3>C. Keep LT mortgage until maturity + no Amsterdam purchase</h3>
-<p class="note">Baseline investment-compounding scenario. Useful even if it does not solve Amsterdam borrowing capacity.</p>
+<h3>C. Keep 2nd mortgage until maturity + no NL property purchase</h3>
+<p class="note">Baseline investment-compounding scenario. Useful even if it does not solve Dutch mortgage borrowing capacity.</p>
 </div>
 
 <div id="scenarioD" class="tab-panel">
-<h3>D. Sell LT property + invest into ETF + no Amsterdam purchase</h3>
+<h3>D. Sell 2nd property + invest into ETF + no NL property purchase</h3>
 <div class="grid">
-<label>LT sale year <input id="dSaleYear" type="number" value="2035"/></label>
-<label>LT sale costs (% sale price) <input id="dSaleCostsPct" type="number" value="0" step="0.1"/></label>
+<label>2nd property sale year <input id="dSaleYear" type="number" value="2035"/></label>
+<label>2nd property sale month <input id="dSaleMonth" type="number" value="1" min="1" max="12"/></label>
+<label>2nd property sale costs (% sale price) <input id="dSaleCostsPct" type="number" value="0" step="0.1"/></label>
 <label>Mother housing reserve (EUR) <input id="dMotherReserve" type="number" value="0"/></label>
 </div>
-<p class="note">This tests selling LT and reallocating net proceeds into ETF without buying Amsterdam.</p>
+<p class="note">This tests selling the 2nd property and reallocating net proceeds into ETF without buying an NL property.</p>
 </div>
 </section>
 
@@ -147,7 +151,7 @@
       <button type="button" class="segment" data-currency="RUB">RUB</button>
     </div>
     <span id="fxStatus" class="fx-status">EUR base</span>
-    <button id="downloadCsv" type="button">Download CSV</button>
+    <button id="storeCompare" type="button">Store and compare</button><button id="clearStoredCompare" type="button" class="secondary">Clear stored</button><button id="downloadCsv" type="button">Download CSV</button>
   </div>
 </div>
 <div class="kpis three">
@@ -156,8 +160,28 @@
 <div><span>Most liquid final ETF</span><strong id="bestLiquidity">-</strong></div>
 </div>
 <div class="table-wrap result-wrap"><table id="summaryTable">
-<thead><tr><th>Scenario</th><th>Feasible?</th><th>Final ETF</th><th>LT equity</th><th>AMS equity</th><th>Total net worth</th><th>Inflation-adjusted net worth</th><th>Total Box 3 tax</th><th>Liquidity shortfall</th><th>Comment</th></tr></thead><tbody></tbody>
+<thead><tr><th>Scenario</th><th>Feasible?</th><th>Final ETF</th><th>2nd property equity</th><th>NL property equity</th><th>Total net worth</th><th>Inflation-adjusted net worth</th><th>Total Box 3 tax</th><th>Liquidity shortfall</th><th>Comment</th></tr></thead><tbody></tbody>
 </table></div>
+
+<div id="storedComparisonBlock" class="stored-comparison hidden">
+  <div class="section-head">
+    <h3>Stored vs current comparison</h3>
+    <span id="storedComparisonMeta" class="fx-status"></span>
+  </div>
+  <div class="table-wrap result-wrap compare-wrap">
+    <table id="storedComparisonTable">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Stored</th>
+          <th>Current</th>
+          <th>Diff</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
 
 <h3>Scenario chart: total net worth</h3>
 <div id="chartControls" class="chart-controls"></div>
@@ -189,7 +213,7 @@
 <button class="detail-tab-button" data-detail="D" type="button">Scenario D</button>
 </div>
 <div class="table-wrap result-wrap"><table id="detailsTable">
-<thead><tr><th>Year</th><th>ETF EOY</th><th>LT value</th><th>LT debt</th><th>LT equity</th><th>AMS value</th><th>AMS debt</th><th>AMS equity</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Events</th></tr></thead><tbody></tbody>
+<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Events</th></tr></thead><tbody></tbody>
 </table></div>
 </section>
 
@@ -203,10 +227,10 @@
 <div class="grid">
 <label>Scenario for pension base
   <select id="pensionScenario">
-    <option value="A">A. Repay LT + buy AMS</option>
-    <option value="B">B. Sell LT + buy AMS</option>
-    <option value="C">C. Keep LT + no AMS</option>
-    <option value="D">D. Sell LT + ETF only</option>
+    <option value="A">A. Repay 2nd mortgage + buy NL property</option>
+    <option value="B">B. Sell 2nd property + buy NL property</option>
+    <option value="C">C. Keep 2nd property + no NL property</option>
+    <option value="D">D. Sell 2nd property + ETF only</option>
   </select>
 </label>
 
@@ -223,7 +247,7 @@
   <input id="pensionEtfReturn" type="number" value="6" step="0.1"/>
 </label>
 
-<label class="field-label">Sell remaining LT property into ETF
+<label class="field-label">Sell remaining 2nd property into ETF
   <span class="switch-control inline-switch">
     <span class="switch-label">No</span>
     <input id="pensionSellLt" type="checkbox"/>
@@ -235,13 +259,14 @@
 
 <div class="kpis three">
 <div><span>ETF base at EOY 2053</span><strong id="pensionEtfBase">-</strong></div>
-<div><span>Annual ETF income</span><strong id="pensionEtfIncomeAnnual">-</strong></div>
+<div><span>Annual net ETF income</span><strong id="pensionEtfIncomeAnnual">-</strong></div>
 <div><span>Monthly net pension income</span><strong id="pensionMonthlyFuture">-</strong></div>
 </div>
 
 <div class="kpis three">
 <div><span>Monthly income in today's EUR</span><strong id="pensionMonthlyToday">-</strong></div>
-<div><span>LT sale proceeds added to ETF</span><strong id="pensionLtSaleProceeds">-</strong></div>
+<div><span>2nd sale proceeds added to ETF</span><strong id="pensionLtSaleProceeds">-</strong></div>
+<div><span>Annual Box 3 tax in retirement</span><strong id="pensionBox3Tax">-</strong></div>
 <div><span>Inflation factor to 2054</span><strong id="pensionInflationFactor">-</strong></div>
 </div>
 
