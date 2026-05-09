@@ -156,3 +156,22 @@ Added:
     - 300k-500k at 1%
     - 500k+ at 2%
   - tax is deducted from ETF/cashflow and tracked as total 2nd property tax
+
+
+## v18 fix: Scenario A extra-cash liquidity
+
+Fixed Scenario A feasibility logic.
+
+Problem:
+- Scenario A could still show a liquidity shortfall even when a very large "Extra cash available for repayment" was entered.
+- The dynamic search and actual simulation did not consistently treat extra cash as available liquidity.
+- Taxes and purchase costs could create shortfalls even when the scenario had extra cash entered.
+
+Fix:
+- Scenario A now creates a scenario-level cash reserve equal to "Extra cash available for repayment".
+- The dynamic search deducts Box 3 tax from ETF first and then from this cash reserve before checking whether the 2nd mortgage can be fully repaid.
+- Actual simulation uses the same liquidity order.
+- 2nd mortgage repayment uses ETF first if "Use ETF" is enabled, then cash reserve.
+- Other cash outflows, such as tax and purchase costs, can use ETF first and then the Scenario A cash reserve before recording a shortfall.
+
+The cash reserve is treated as external liquidity for feasibility, not as an investable asset and not as part of net worth.

@@ -470,13 +470,51 @@ function box3Tax(model, etf, secondDebt, secondTaxValue, sold) {
 
 function spendFromEtf(state, amount, label = "cash outflow") {
   if (amount <= 0) return;
-  if (state.etf >= amount) {
-    state.etf -= amount;
-  } else {
-    state.shortfall += amount - state.etf;
-    state.events.push(`${label} shortfall ${fmtEUR2.format(amount - state.etf)}`);
-    state.etf = 0;
+
+  let remaining = amount;
+
+  const fromEtf = Math.min(state.etf || 0, remaining);
+  state.etf -= fromEtf;
+  remaining -= fromEtf;
+
+  if (remaining > 0 && state.cashReserve > 0) {
+    const fromCash = Math.min(state.cashReserve, remaining);
+    state.cashReserve -= fromCash;
+    remaining -= fromCash;
   }
+
+  if (remaining > 0.005) {
+    state.shortfall += remaining;
+    state.events.push(`${label} shortfall ${fmtEUR2.format(remaining)}`);
+  }
+}
+
+function repayDebtFromAvailableLiquidity(state, debt, useEtf, label = "2nd mortgage repayment") {
+  let remaining = debt;
+
+  if (useEtf) {
+    const fromEtf = Math.min(state.etf || 0, remaining);
+    state.etf -= fromEtf;
+    remaining -= fromEtf;
+  }
+
+  if (remaining > 0 && state.cashReserve > 0) {
+    const fromCash = Math.min(state.cashReserve, remaining);
+    state.cashReserve -= fromCash;
+    remaining -= fromCash;
+  }
+
+  if (remaining > 0.005) {
+    state.shortfall += remaining;
+    state.events.push(`${label} shortfall ${fmtEUR2.format(remaining)}`);
+  }
+
+  return Math.max(0, debt - remaining);
+}
+
+function canRepayDebtWithAvailableLiquidity(etf, cashReserve, debt, useEtf) {
+  const available = (useEtf ? etf : 0) + Math.max(0, cashReserve || 0);
+  return available + 0.005 >= debt;
 }
 
 function calculateInflationFactor(startYear, targetYear, futureRate) {
@@ -495,17 +533,24 @@ function calculateInflationFactor(startYear, targetYear, futureRate) {
 function simulateForDynamicYear(model, candidateYear) {
   const ltSchedule = buildLtSchedule(model);
   const monthlyEtfReturn = Math.pow(1 + model.etfGrossReturn, 1 / 12) - 1;
+  const sc = model.scenarios.A;
+
   let etf = model.etfStartingValue;
+  let cashReserve = Math.max(0, sc.extraCash || 0);
 
   for (let year = model.projectionStartYear; year <= candidateYear; year += 1) {
     const ltDebtJan1 = debtJan1(ltSchedule, year, model.ltLoanAmount);
     const tax = box3Tax(model, etf, ltDebtJan1, model.ltPropertyValue, false);
-    etf = Math.max(0, etf - tax);
+
+    const taxFromEtf = Math.min(etf, tax);
+    etf -= taxFromEtf;
+    const taxRemainder = tax - taxFromEtf;
+    if (taxRemainder > 0) {
+      cashReserve = Math.max(0, cashReserve - taxRemainder);
+    }
 
     if (year === candidateYear) {
-      const sc = model.scenarios.A;
-      const available = (sc.useEtf ? etf : 0) + sc.extraCash;
-      if (available >= ltDebtJan1) return true;
+      return canRepayDebtWithAvailableLiquidity(etf, cashReserve, ltDebtJan1, sc.useEtf);
     }
 
     for (let month = 1; month <= 12; month += 1) {
@@ -537,7 +582,7 @@ function simulateScenario(model, key) {
     sc.repayYear = dyn;
   }
 
-  const state = { etf: model.etfStartingValue, shortfall: 0, events: [] };
+  const state = { etf: model.etfStartingValue, cashReserve: key === "A" ? Math.max(0, sc.extraCash || 0) : 0, shortfall: 0, events: [] };
   let ltSold = false;
   let ltRepaid = false;
   let nlOwned = false;
@@ -564,15 +609,9 @@ function simulateScenario(model, key) {
 
     if (key === "A" && sc.repayYear !== null && year === sc.repayYear && !ltRepaid && !ltSold) {
       const debt = ltDebtJan1;
-      const available = (sc.useEtf ? state.etf : 0) + sc.extraCash;
-      const paid = Math.min(debt, available);
-      if (sc.useEtf) spendFromEtf(state, Math.min(state.etf, paid), "2nd mortgage repayment");
-      if (paid < debt) {
-        state.shortfall += debt - paid;
-        state.events.push(`2nd mortgage repayment shortfall ${fmtEUR2.format(debt - paid)}`);
-      }
+      const paid = repayDebtFromAvailableLiquidity(state, debt, sc.useEtf, "2nd mortgage repayment");
       ltRepaid = true;
-      state.events.push(`2nd mortgage repaid ${fmtEUR2.format(debt)}`);
+      state.events.push(`2nd mortgage repaid ${fmtEUR2.format(paid)} of ${fmtEUR2.format(debt)}`);
       state.events.push(`NL property purchase year ${sc.purchaseYear}`);
     }
 
