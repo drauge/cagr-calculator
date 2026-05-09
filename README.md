@@ -25,3 +25,21 @@
 - Added Scenario D: sell LT property, invest proceeds into ETF, no Amsterdam purchase.
 
 Historical eurozone inflation data is embedded for 1997-2025 based on public annual eurozone HICP inflation tables.
+
+
+## v11 changes: Future pension income
+
+Added a bottom-page Future pension income section:
+- Scenario selector: A/B/C/D.
+- AOW + employer pension toggle:
+  - EUR 22,584/year without additional contribution.
+  - EUR 34,320/year with additional contribution.
+- Uses selected scenario's ETF value at end of 2053 as the base.
+- Separate conservative ETF return input from 2054 onward, default 6%.
+- Optional toggle to sell remaining LT property into ETF at EOY 2053.
+  - Disabled automatically if LT property is already sold in the selected scenario.
+- Outputs:
+  - ETF base at EOY 2053.
+  - annual ETF income.
+  - monthly future pension income.
+  - monthly income in today's EUR using personal inflation.

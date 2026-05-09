@@ -27,7 +27,7 @@
 <h3>Timeline & ETF</h3>
 <div class="grid">
 <label>Projection start year <input id="projectionStartYear" type="number" value="2025"/></label>
-<label>Projection years <input id="projectionYears" type="number" value="21"/></label>
+<label>Projection years <input id="projectionYears" type="number" value="29"/></label>
 <label>ETF value on Jan 1 start year (EUR) <input id="etfStartingValue" type="number" value="0"/></label>
 <label>ETF gross annualized return (%) <input id="etfGrossReturn" type="number" value="10" step="0.1"/></label>
 <label>Personal inflation / spending inflation (%) <input id="personalInflation" type="number" value="3.3" step="0.1"/></label>
@@ -192,6 +192,62 @@
 <thead><tr><th>Year</th><th>ETF EOY</th><th>LT value</th><th>LT debt</th><th>LT equity</th><th>AMS value</th><th>AMS debt</th><th>AMS equity</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Events</th></tr></thead><tbody></tbody>
 </table></div>
 </section>
+
+<section class="card">
+<h2>Future pension income</h2>
+<p class="note">
+  Uses selected scenario's ETF value at end of 2053 as the retirement investment base.
+  From 2054 onward, this section uses its own conservative ETF return assumption.
+</p>
+
+<div class="grid">
+<label>Scenario for pension base
+  <select id="pensionScenario">
+    <option value="A">A. Repay LT + buy AMS</option>
+    <option value="B">B. Sell LT + buy AMS</option>
+    <option value="C">C. Keep LT + no AMS</option>
+    <option value="D">D. Sell LT + ETF only</option>
+  </select>
+</label>
+
+<label class="field-label">AOW + employer pension
+  <span class="switch-control inline-switch">
+    <span class="switch-label">€22,584</span>
+    <input id="pensionHigherBase" type="checkbox" checked/>
+    <span class="switch-slider" aria-hidden="true"></span>
+    <span class="switch-label">€34,320</span>
+  </span>
+</label>
+
+<label>Conservative ETF return from 2054 (%)
+  <input id="pensionEtfReturn" type="number" value="6" step="0.1"/>
+</label>
+
+<label class="field-label">Sell remaining LT property into ETF
+  <span class="switch-control inline-switch">
+    <span class="switch-label">No</span>
+    <input id="pensionSellLt" type="checkbox"/>
+    <span class="switch-slider" aria-hidden="true"></span>
+    <span class="switch-label">Yes</span>
+  </span>
+</label>
+</div>
+
+<div class="kpis three">
+<div><span>ETF base at EOY 2053</span><strong id="pensionEtfBase">-</strong></div>
+<div><span>Annual ETF income</span><strong id="pensionEtfIncomeAnnual">-</strong></div>
+<div><span>Monthly net pension income</span><strong id="pensionMonthlyFuture">-</strong></div>
+</div>
+
+<div class="kpis three">
+<div><span>Monthly income in today's EUR</span><strong id="pensionMonthlyToday">-</strong></div>
+<div><span>LT sale proceeds added to ETF</span><strong id="pensionLtSaleProceeds">-</strong></div>
+<div><span>Inflation factor to 2054</span><strong id="pensionInflationFactor">-</strong></div>
+</div>
+
+<p id="pensionNote" class="note"></p>
+</section>
+
 </main>
 <script src="app.js"></script>
 </body>

@@ -149,7 +149,98 @@ function renderChart(res){const svg=document.getElementById("chart");svg.innerHT
 
 function calculateInflationFactor(startYear,targetYear,futureRate){let factor=1;if(targetYear===startYear)return factor;const step=targetYear>startYear?1:-1;for(let y=startYear+step;step>0?y<=targetYear:y>=targetYear;y+=step){const rate=EUROZONE_HISTORICAL_INFLATION[y] ?? futureRate;if(step>0)factor*=1+rate;else factor/=1+rate}return factor}
 function renderInflationCalculator(){const amount=inputNumber("inflationAmount"),start=Math.round(inputNumber("inflationStartYear")),target=Math.round(inputNumber("inflationTargetYear")),future=inputPct("inflationFutureRate");const factor=calculateInflationFactor(start,target,future),adjusted=amount*factor,years=Math.abs(target-start),avg=years?Math.pow(factor,1/years)-1:0;document.getElementById("inflationAdjustedAmount").textContent=fmtEUR.format(adjusted);document.getElementById("inflationFactor").textContent=factor.toFixed(3)+"x";document.getElementById("inflationAvgRate").textContent=(avg*100).toFixed(2)+"%"}
-function render(res){renderSummary(res);renderDetails(res);renderChart(res);renderInflationCalculator()}
+
+function getScenarioLabel(key) {
+  return scenarioDefs.find(s => s.key === key)?.label || key;
+}
+
+function getYearRow(scenarioResult, year) {
+  if (!scenarioResult || !scenarioResult.rows) return null;
+  return scenarioResult.rows.find(r => Number(r.year) === Number(year)) || scenarioResult.rows.at(-1) || null;
+}
+
+function calculatePensionFromResult(result) {
+  const scenarioKey = document.getElementById("pensionScenario")?.value || "A";
+  const scenario = result?.scenarios?.[scenarioKey];
+  const row2053 = getYearRow(scenario, 2053);
+  const finalRow = scenario?.rows?.at(-1);
+  const model = result?.model || readModel();
+
+  const basePensionAnnual = document.getElementById("pensionHigherBase")?.checked ? 34320 : 22584;
+  const conservativeReturn = inputPct("pensionEtfReturn") || 0;
+  const sellLtToggle = document.getElementById("pensionSellLt");
+
+  let etfBase = row2053?.etf || 0;
+  let ltSaleProceeds = 0;
+  let sellDisabled = false;
+  let note = "";
+
+  const selectedScenarioAlreadySoldLt = row2053 ? row2053.ltMarketValue <= 0 && row2053.ltDebt <= 0 : false;
+  if (sellLtToggle) {
+    sellDisabled = selectedScenarioAlreadySoldLt;
+    sellLtToggle.disabled = sellDisabled;
+    if (sellDisabled) sellLtToggle.checked = false;
+  }
+
+  if (!row2053) {
+    note = "Projection does not reach 2053. Increase projection years so the pension section can use EOY 2053 ETF value.";
+  } else if (sellLtToggle?.checked && !selectedScenarioAlreadySoldLt) {
+    ltSaleProceeds = Math.max(0, (row2053.ltMarketValue || 0) - (row2053.ltDebt || 0));
+    etfBase += ltSaleProceeds;
+    note = `Scenario ${scenarioKey}: remaining LT property is sold at EOY 2053 and net equity is added to ETF.`;
+  } else if (selectedScenarioAlreadySoldLt) {
+    note = `Scenario ${scenarioKey}: LT property is already sold before / by 2053, so the LT sale toggle is disabled.`;
+  } else {
+    note = `Scenario ${scenarioKey}: LT property is retained for pension calculation unless the sale toggle is enabled.`;
+  }
+
+  const annualEtfIncome = etfBase * conservativeReturn;
+  const totalAnnualFuture = basePensionAnnual + annualEtfIncome;
+  const monthlyFuture = totalAnnualFuture / 12;
+
+  const years = 2054 - model.projectionStartYear;
+  const inflationFactor = Math.pow(1 + (model.personalInflation ?? inputPct("personalInflation") ?? 0.033), years);
+  const monthlyToday = monthlyFuture / inflationFactor;
+
+  return {
+    scenarioKey,
+    scenario,
+    row2053,
+    basePensionAnnual,
+    etfBase,
+    ltSaleProceeds,
+    conservativeReturn,
+    annualEtfIncome,
+    totalAnnualFuture,
+    monthlyFuture,
+    monthlyToday,
+    inflationFactor,
+    note,
+  };
+}
+
+function renderPension(result) {
+  const p = calculatePensionFromResult(result);
+
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
+
+  set("pensionEtfBase", fmtEUR.format(p.etfBase));
+  set("pensionEtfIncomeAnnual", fmtEUR.format(p.annualEtfIncome));
+  set("pensionMonthlyFuture", fmtEUR.format(p.monthlyFuture));
+  set("pensionMonthlyToday", fmtEUR.format(p.monthlyToday));
+  set("pensionLtSaleProceeds", fmtEUR.format(p.ltSaleProceeds));
+  set("pensionInflationFactor", `${p.inflationFactor.toFixed(2)}x`);
+
+  const noteEl = document.getElementById("pensionNote");
+  if (noteEl) {
+    noteEl.textContent = `${p.note} Pension base: ${fmtEUR.format(p.basePensionAnnual)}/year AOW + employer pension plus ${(p.conservativeReturn * 100).toFixed(1)}% ETF income.`;
+  }
+}
+
+function render(res){renderSummary(res);renderDetails(res);renderChart(res);renderPension(res);renderInflationCalculator()}
 function calculate(){try{const res=simulateAll();window.__lastResult=res;render(res)}catch(e){console.error(e)}}
 function downloadCsv(){const res=window.__lastResult||simulateAll(),rows=[["Scenario","Year","ETF","LT value","LT debt","LT equity","AMS value","AMS debt","AMS equity","Total net worth","Real net worth","Box 3 tax","Events"]];Object.values(res.scenarios).forEach(s=>s.rows.forEach(r=>rows.push([s.label,r.year,r.etf.toFixed(2),r.ltMarketValue.toFixed(2),r.ltDebt.toFixed(2),r.ltEquity.toFixed(2),r.amsValue.toFixed(2),r.amsDebt.toFixed(2),r.amsEquity.toFixed(2),r.totalNetWorth.toFixed(2),r.realNetWorth.toFixed(2),r.box3Tax.toFixed(2),r.events])));const csv=rows.map(row=>row.map(x=>`"${String(x).replaceAll('"','""')}"`).join(",")).join("\n"),blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="scenario_comparison.csv";a.click();URL.revokeObjectURL(url)}
 function applyFiscalPartnerDefaults(){const p=document.getElementById("hasFiscalPartner"),a=document.getElementById("box3Allowance"),d=document.getElementById("debtThreshold");if(!p||!a||!d)return;if(p.checked){a.value=BOX3_2025_PARTNER_ALLOWANCE;d.value=BOX3_2025_PARTNER_DEBT_THRESHOLD}else{a.value=BOX3_2025_SINGLE_ALLOWANCE;d.value=BOX3_2025_SINGLE_DEBT_THRESHOLD}}
