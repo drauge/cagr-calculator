@@ -43,3 +43,26 @@ Added a bottom-page Future pension income section:
   - annual ETF income.
   - monthly future pension income.
   - monthly income in today's EUR using personal inflation.
+
+
+## v12 changes: Pension inflation alignment
+
+Fixed Future pension income inflation logic.
+
+Previously:
+- Future pension income used Personal inflation directly.
+- Changing the Inflation calculator's Future annual inflation did not affect the pension section.
+
+Now:
+- Future pension income uses the same `calculateInflationFactor()` engine as the Inflation calculator.
+- Pension "Inflation factor to 2054" uses:
+  - Inflation calculator Start year
+  - fixed pension target year 2054
+  - Inflation calculator Future annual inflation
+  - embedded historical eurozone inflation where available
+
+Therefore, if the Inflation calculator has:
+- Start year = projection start year
+- Target year = 2054
+
+then its cumulative inflation factor and the pension section's inflation factor to 2054 will match.

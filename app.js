@@ -198,8 +198,14 @@ function calculatePensionFromResult(result) {
   const totalAnnualFuture = basePensionAnnual + annualEtfIncome;
   const monthlyFuture = totalAnnualFuture / 12;
 
-  const years = 2054 - model.projectionStartYear;
-  const inflationFactor = Math.pow(1 + (model.personalInflation ?? inputPct("personalInflation") ?? 0.033), years);
+  /*
+    Use the same inflation engine as the Inflation calculator.
+    This keeps "Inflation factor to 2054" aligned with the Inflation calculator
+    when its Start year = projection start year and Target year = 2054.
+  */
+  const inflationStartYear = Math.round(inputNumber("inflationStartYear")) || model.projectionStartYear;
+  const inflationFutureRate = inputPct("inflationFutureRate") || model.personalInflation || 0.033;
+  const inflationFactor = calculateInflationFactor(inflationStartYear, 2054, inflationFutureRate);
   const monthlyToday = monthlyFuture / inflationFactor;
 
   return {
@@ -232,7 +238,7 @@ function renderPension(result) {
   set("pensionMonthlyFuture", fmtEUR.format(p.monthlyFuture));
   set("pensionMonthlyToday", fmtEUR.format(p.monthlyToday));
   set("pensionLtSaleProceeds", fmtEUR.format(p.ltSaleProceeds));
-  set("pensionInflationFactor", `${p.inflationFactor.toFixed(2)}x`);
+  set("pensionInflationFactor", `${p.inflationFactor.toFixed(3)}x`);
 
   const noteEl = document.getElementById("pensionNote");
   if (noteEl) {
@@ -249,5 +255,5 @@ function initTheme(){let stored="light";try{stored=localStorage.getItem("calcula
 function clearTableHighlights(table){table.querySelectorAll(".col-hover,.cell-hover,.header-hover").forEach(el=>el.classList.remove("col-hover","cell-hover","header-hover"))}
 function setupTableHeaderHover(){document.querySelectorAll("table").forEach(table=>{table.addEventListener("mouseover",e=>{const th=e.target.closest("th");if(!th||!table.contains(th))return;clearTableHighlights(table);const idx=th.cellIndex;th.classList.add("header-hover");Array.from(table.rows).forEach(row=>{const cell=row.cells[idx];if(cell)cell.classList.add("col-hover")})});table.addEventListener("mouseout",e=>{if(!e.relatedTarget||!table.contains(e.relatedTarget))clearTableHighlights(table)})})}
 function setupTabs(){document.querySelectorAll(".tab-button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab-button").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab-panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active")});document.querySelectorAll(".detail-tab-button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".detail-tab-button").forEach(x=>x.classList.remove("active"));b.classList.add("active");activeDetailScenario=b.dataset.detail;if(window.__lastResult)renderDetails(window.__lastResult)})}
-function init(){initTheme();addRateRow({effectiveFrom:"2025-08-25",euribor:2.08});addRateRow({effectiveFrom:"2026-01-01",euribor:2.12});addEtfContributionRow({amount:10000,frequency:"Yearly",month:1,startYear:2026,endYear:2028});addEtfContributionRow({amount:16500,frequency:"Yearly",month:1,startYear:2029,endYear:2045});addLumpContributionRow({amount:0,year:2026,month:1,destination:"LT repayment",description:"optional"});document.querySelectorAll("input,select").forEach(el=>{el.addEventListener("input",calculate);el.addEventListener("change",calculate)});document.getElementById("hasFiscalPartner").addEventListener("change",()=>{applyFiscalPartnerDefaults();calculate()});document.getElementById("personalInflation").addEventListener("input",()=>{document.getElementById("inflationFutureRate").value=document.getElementById("personalInflation").value;calculate()});document.getElementById("addRateRow").onclick=()=>{addRateRow();calculate()};document.getElementById("addEtfContribution").onclick=()=>{addEtfContributionRow();calculate()};document.getElementById("addLumpContribution").onclick=()=>{addLumpContributionRow();calculate()};document.getElementById("downloadCsv").onclick=downloadCsv;window.addEventListener("resize",()=>{if(window.__lastResult)renderChart(window.__lastResult)});setupTabs();renderChartControls();setupTableHeaderHover();setupCurrencyToggle();applyFiscalPartnerDefaults();calculate();loadFxRates()}
+function init(){initTheme();addRateRow({effectiveFrom:"2025-08-25",euribor:2.08});addRateRow({effectiveFrom:"2026-01-01",euribor:2.12});addEtfContributionRow({amount:10000,frequency:"Yearly",month:1,startYear:2026,endYear:2028});addEtfContributionRow({amount:16500,frequency:"Yearly",month:1,startYear:2029,endYear:2045});addLumpContributionRow({amount:0,year:2026,month:1,destination:"LT repayment",description:"optional"});document.querySelectorAll("input,select").forEach(el=>{el.addEventListener("input",calculate);el.addEventListener("change",calculate)});document.getElementById("hasFiscalPartner").addEventListener("change",()=>{applyFiscalPartnerDefaults();calculate()});document.getElementById("personalInflation").addEventListener("input",()=>{calculate()});document.getElementById("addRateRow").onclick=()=>{addRateRow();calculate()};document.getElementById("addEtfContribution").onclick=()=>{addEtfContributionRow();calculate()};document.getElementById("addLumpContribution").onclick=()=>{addLumpContributionRow();calculate()};document.getElementById("downloadCsv").onclick=downloadCsv;window.addEventListener("resize",()=>{if(window.__lastResult)renderChart(window.__lastResult)});setupTabs();renderChartControls();setupTableHeaderHover();setupCurrencyToggle();applyFiscalPartnerDefaults();calculate();loadFxRates()}
 init();
