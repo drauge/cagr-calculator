@@ -1,114 +1,27 @@
 # Scenario Comparison Calculator
 
-Compares three scenarios:
-1. A. Repay LT mortgage fully + buy Amsterdam
-2. B. Keep LT mortgage + no Amsterdam purchase
-3. C. Sell LT property + buy Amsterdam
+## v10 changes
 
-Layout:
-- common variables first
-- scenario-specific assumptions on 3 tabs
-- overall performance and analysis
-- yearly details
+- Streamlined inflation:
+  - Personal inflation / spending inflation: 3.3%
+  - LT property appreciation: 3.6%
+  - Amsterdam property appreciation: 5.0%
+  - Real net worth now uses one personal inflation factor for the full net worth result.
+- Added separate Inflation Calculator:
+  - historical eurozone annual inflation for past years
+  - personal inflation for future years
+  - amount, start year, and target year inputs
+- Fixed currency display and added more robust EUR/USD loading.
+- Currency conversion now applies to:
+  - Overall performance & analysis monetary columns
+  - Best nominal net worth
+  - Best real net worth
+  - Most liquid final ETF
+- Scenario order changed:
+  - A. Repay LT + buy AMS
+  - B. Sell LT + buy AMS
+  - C. Keep LT + no AMS
+  - D. Sell LT + ETF only
+- Added Scenario D: sell LT property, invest proceeds into ETF, no Amsterdam purchase.
 
-Important assumptions:
-- Amsterdam owner-occupied home is treated outside Box 3.
-- LT investment property is modeled in Box 3 with treaty-relief approximation.
-- Scenario A treats full LT repayment as required for Amsterdam borrowing capacity.
-
-
-## v2 changes
-
-Scenario A no longer asks for separate LT full repayment year and Amsterdam purchase year.
-
-Instead:
-- the calculator dynamically finds the earliest year when ETF + extra cash can fully repay the LT mortgage
-- LT full repayment and Amsterdam purchase happen in that same year
-- if no such year exists before the maximum wait year, Scenario A is marked infeasible
-
-Added:
-- optional LT mortgage lump-sum repayments table
-- these repayments reduce the LT mortgage forecast before the dynamic Scenario A affordability test
-
-
-## v3 changes
-
-The old dedicated LT lump-sum repayment table was replaced with a unified **Lump sum contributions** table.
-
-Each row has:
-- amount
-- year
-- month
-- destination: `ETF` or `LT repayment`
-- description
-
-Scenario logic:
-- `ETF` destination increases ETF balance in that year/month.
-- `LT repayment` destination reduces the LT mortgage balance in the mortgage forecast.
-- Scenario A dynamic repayment/purchase year uses both:
-  - ETF-directed lump sums when calculating available ETF liquidity
-  - LT-repayment-directed lump sums when calculating remaining LT mortgage debt
-
-
-## v4 changes: Box 3 fiscal partner flag
-
-Added **Fiscal partner for Box 3?**
-
-If enabled, the model uses 2025 joint Box 3 limits:
-- heffingsvrij vermogen: EUR 115,368
-- debt threshold: EUR 7,600
-
-The model allocates the combined Box 3 allowance fully to the user's side, as requested.
-
-
-## v5 changes
-
-Fiscal partner dropdown now updates the visible input fields:
-- No: allowance EUR 57,684, debt threshold EUR 3,800
-- Yes: allowance EUR 115,368, debt threshold EUR 7,600
-
-Updated default assumptions:
-- LT annual appreciation: 3.6%
-- LT annual inflation: 3.44%
-- Amsterdam purchase costs: EUR 25,000
-- Rent avoided: EUR 2,300/month
-- NL annual inflation: 3.3%
-
-
-## v6 changes
-
-Added:
-- Light / dark theme switch with localStorage persistence.
-- Table header hover highlighting:
-  - hover a header to lightly highlight that column;
-  - hover a row to lightly highlight the row;
-  - intersection cell receives stronger highlight.
-
-
-## v7 changes
-
-Updated controls:
-- Light/dark theme control is now a pill-style toggle switch.
-- Fiscal partner for Box 3 is now a matching Yes/No toggle switch.
-- Fiscal partner toggle still updates visible Box 3 allowance and debt threshold fields.
-
-
-## v8 changes
-
-Dark-theme controls were aligned with the rest of the dark UI:
-- primary buttons now use darker blue hover/active states
-- secondary buttons no longer stay white in dark mode
-- tabs now use dark surfaces, blue active state, and softer hover states
-- focus rings and active states are theme-aware
-
-
-## v9 changes
-
-Added a EUR/USD/RUB segmented currency toggle for the **Overall performance & analysis** table only.
-
-Implementation:
-- Internal calculations remain in EUR.
-- Summary table monetary columns are converted for display.
-- USD uses the public Frankfurter API, based on ECB reference rates.
-- RUB uses public CBR daily reference data via `cbr-xml-daily.ru`.
-- If live FX loading fails, the table remains in EUR / falls back to available rates.
+Historical eurozone inflation data is embedded for 1997-2025 based on public annual eurozone HICP inflation tables.
