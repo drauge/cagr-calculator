@@ -189,6 +189,7 @@ function readModel() {
     projectionEndYear: retirement,
 
     etfStartingValue: inputNumber("etfStartingValue"),
+    externalCashReserve: inputNumber("externalCashReserve"),
     etfGrossReturn: inputPct("etfGrossReturn"),
     personalInflation: inputPct("personalInflation"),
 
@@ -536,7 +537,7 @@ function simulateForDynamicYear(model, candidateYear) {
   const sc = model.scenarios.A;
 
   let etf = model.etfStartingValue;
-  let cashReserve = Math.max(0, sc.extraCash || 0);
+  let cashReserve = Math.max(0, (model.externalCashReserve || 0) + (sc.extraCash || 0));
 
   for (let year = model.projectionStartYear; year <= candidateYear; year += 1) {
     const ltDebtJan1 = debtJan1(ltSchedule, year, model.ltLoanAmount);
@@ -562,12 +563,51 @@ function simulateForDynamicYear(model, candidateYear) {
   return false;
 }
 
+function simulateScenarioAWithFixedYear(model, fixedYear) {
+  const testModel = {
+    ...model,
+    scenarios: {
+      ...model.scenarios,
+      A: {
+        ...model.scenarios.A,
+        purchaseYear: fixedYear,
+        repayYear: fixedYear,
+      },
+    },
+    __scenarioAFixedYear: fixedYear,
+    __scenarioASearchMode: true,
+  };
+
+  return simulateScenario(testModel, "A");
+}
+
 function estimateScenarioAPurchaseYear(model) {
   const sc = model.scenarios.A;
+
   for (let year = model.projectionStartYear; year <= model.projectionEndYear; year += 1) {
     if (year < sc.earliestPurchaseYear || year > sc.maxWaitYear) continue;
-    if (simulateForDynamicYear(model, year)) return year;
+
+    /*
+      Step 1: cheap pre-check.
+      The year must at least be able to repay the 2nd mortgage after Jan 1 taxes.
+    */
+    if (!simulateForDynamicYear(model, year)) continue;
+
+    /*
+      Step 2: strict feasibility check.
+      Run the actual Scenario A mechanics with this candidate year:
+      - Jan 1 taxes
+      - 2nd mortgage repayment
+      - NL property purchase costs
+      - monthly housing cashflow
+      - 2nd property local tax
+      - ETF contributions/growth
+      The chosen year must produce no liquidity shortfall.
+    */
+    const test = simulateScenarioAWithFixedYear(model, year);
+    if (test.liquidityShortfall <= 0.005) return year;
   }
+
   return null;
 }
 
@@ -577,12 +617,17 @@ function simulateScenario(model, key) {
   const sc = model.scenarios[key];
 
   if (key === "A") {
-    const dyn = estimateScenarioAPurchaseYear(model);
-    sc.purchaseYear = dyn;
-    sc.repayYear = dyn;
+    if (model.__scenarioAFixedYear !== undefined && model.__scenarioAFixedYear !== null) {
+      sc.purchaseYear = model.__scenarioAFixedYear;
+      sc.repayYear = model.__scenarioAFixedYear;
+    } else {
+      const dyn = estimateScenarioAPurchaseYear(model);
+      sc.purchaseYear = dyn;
+      sc.repayYear = dyn;
+    }
   }
 
-  const state = { etf: model.etfStartingValue, cashReserve: key === "A" ? Math.max(0, sc.extraCash || 0) : 0, shortfall: 0, events: [] };
+  const state = { etf: model.etfStartingValue, cashReserve: Math.max(0, (model.externalCashReserve || 0) + (key === "A" ? (sc.extraCash || 0) : 0)), shortfall: 0, events: [] };
   let ltSold = false;
   let ltRepaid = false;
   let nlOwned = false;

@@ -175,3 +175,44 @@ Fix:
 - Other cash outflows, such as tax and purchase costs, can use ETF first and then the Scenario A cash reserve before recording a shortfall.
 
 The cash reserve is treated as external liquidity for feasibility, not as an investable asset and not as part of net worth.
+
+
+## v19 fix: shared external cash reserve
+
+Problem:
+- Scenarios B/C/D could show liquidity shortfalls because taxes / costs were charged against ETF only.
+- The Scenario A extra-cash input did not affect B/C/D, because it was scoped only to Scenario A.
+
+Fix:
+- Added **External cash reserve (€)** under Common variables.
+- This cash reserve is available to all scenarios to cover taxes, property purchase costs, local 2nd-property tax, and negative housing cashflow before recording a liquidity shortfall.
+- Scenario A still has its own extra-cash field for the dynamic repayment-year search. Scenario A uses:
+  - common External cash reserve
+  - plus Scenario A repayment-search cash
+- External cash reserve is treated as liquidity support only:
+  - it is not invested
+  - it is not included in net worth
+  - it is not included in ETF return calculations
+
+
+## v20 fix: Scenario A chooses earliest fully feasible year
+
+Scenario A dynamic year selection was made stricter and less brittle.
+
+Previous behavior:
+- The search chose the first year where the 2nd mortgage repayment itself looked possible.
+- If that year later produced a small liquidity shortfall from purchase costs, tax, local property tax, or same-year cashflow, the whole Scenario A could be marked infeasible.
+
+New behavior:
+- For each candidate year, the calculator first checks whether 2nd mortgage repayment is possible after Jan 1 tax.
+- Then it runs the actual Scenario A mechanics with that candidate year:
+  - Box 3 tax
+  - 2nd mortgage repayment
+  - NL property purchase costs
+  - monthly housing cashflow
+  - 2nd property local tax
+  - ETF contributions/growth
+- If the candidate year creates a liquidity shortfall, the calculator tries the next year.
+- Scenario A is infeasible only if no fully feasible year exists before the Maximum wait year.
+
+This means a small shortfall in 2033 should cause the calculator to try 2034 instead of failing the whole scenario.
