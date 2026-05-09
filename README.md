@@ -116,3 +116,23 @@ Projection settings:
   - Projection start year
   - Retirement year
 - The UI displays calculated projection years as a read-only field.
+
+
+## v16 fix
+
+The generalized v15 UI had broken runtime calculations because some broad text substitutions affected values used by the JavaScript logic.
+
+v16 replaces `app.js` with a clean generalized implementation that keeps internal model fields stable while using generalized UI labels:
+- 2nd property abroad / 2nd mortgage
+- NL property / NL mortgage
+- retirement year drives calculated projection years
+- all scenario calculations, summary table, details table, chart, pension section, inflation calculator, FX, and stored comparison are wired again
+
+Also preserves the v13 math fixes:
+- NL net mortgage payment/month is subtracted from ETF cashflow
+- 2nd mortgage amortization reaches zero at maturity
+- Scenario A dynamic search includes Box 3 tax
+- sale month is used for sale proceeds
+- pension ETF income is net of estimated Box 3 tax
+- liquidity shortfalls are tracked
+- real net worth uses the shared inflation engine
