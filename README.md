@@ -136,3 +136,23 @@ Also preserves the v13 math fixes:
 - pension ETF income is net of estimated Box 3 tax
 - liquidity shortfalls are tracked
 - real net worth uses the shared inflation engine
+
+
+## v17 changes
+
+Added:
+- Sale-month note: sale month is treated as after that month's mortgage payment.
+- Interactive chart:
+  - hover nodes to show scenario/year/value
+  - click nodes to pin tooltip
+  - click graph background to clear pinned tooltip
+  - zoom in/out/reset controls
+- Generalized 2nd property local real-estate tax:
+  - enable/disable toggle
+  - owner/allocation divisor
+  - editable progressive tax brackets
+  - default brackets:
+    - 150k-300k at 0.5%
+    - 300k-500k at 1%
+    - 500k+ at 2%
+  - tax is deducted from ETF/cashflow and tracked as total 2nd property tax

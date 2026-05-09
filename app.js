@@ -34,6 +34,8 @@ const EUROZONE_HISTORICAL_INFLATION = {
 const STORED_COMPARE_KEY = "scenarioCalculatorStoredComparisonV1";
 
 let activeDetailScenario = "A";
+let chartZoom = 1;
+let chartSelectedPoint = null;
 let summaryCurrency = "EUR";
 let fxRates = { EUR: 1, USD: null, RUB: null };
 let fxMeta = { USD: "", RUB: "" };
@@ -159,6 +161,15 @@ function addLumpContributionRow({ amount = 0, year = 2026, month = 1, destinatio
   addRemoveButton(row);
 }
 
+
+function addSecondPropertyTaxBracketRow({ lower = 150000, upper = 300000, rate = 0.5 } = {}) {
+  const row = document.querySelector("#secondPropertyTaxTable tbody").insertRow();
+  addInputCell(row, "number", lower, { min: "0", step: "1000" });
+  addInputCell(row, "number", upper === null ? "" : upper, { min: "0", step: "1000", placeholder: "No cap" });
+  addInputCell(row, "number", rate, { min: "0", step: "0.01" });
+  addRemoveButton(row);
+}
+
 function syncProjectionYears() {
   const start = Math.round(inputNumber("projectionStartYear"));
   const retirement = Math.max(start, Math.round(inputNumber("retirementYear") || start));
@@ -198,6 +209,13 @@ function readModel() {
     ltMonths: Math.max(1, Math.round(inputNumber("ltMonths") || 240)),
     ltMargin: inputPct("ltMargin"),
     ltAppreciation: inputPct("ltAppreciation"),
+    secondPropertyTaxEnabled: (document.getElementById("secondPropertyTaxEnabled")?.value || "yes") === "yes",
+    secondPropertyTaxOwners: Math.max(1, Math.round(inputNumber("secondPropertyTaxOwners") || 1)),
+    secondPropertyTaxBrackets: tableRows("#secondPropertyTaxTable").map(([lower, upper, rate]) => ({
+      lower: n(lower),
+      upper: upper === "" ? null : n(upper),
+      rate: n(rate) / 100,
+    })).sort((a, b) => a.lower - b.lower),
 
     amsPrice: inputNumber("amsPrice"),
     amsLoan: inputNumber("amsLoan"),
@@ -384,6 +402,24 @@ function ltValueEoy(model, year, sold) {
   return ltValueAtMonth(model, year, 12, sold);
 }
 
+
+function calculateSecondPropertyTax(model, propertyValue) {
+  if (!model.secondPropertyTaxEnabled || propertyValue <= 0) return 0;
+
+  const owners = Math.max(1, model.secondPropertyTaxOwners || 1);
+  const allocatedValue = propertyValue / owners;
+  let taxPerOwner = 0;
+
+  for (const bracket of model.secondPropertyTaxBrackets || []) {
+    const lower = Math.max(0, bracket.lower || 0);
+    const upper = bracket.upper === null || bracket.upper === undefined ? Infinity : bracket.upper;
+    const taxableSlice = Math.max(0, Math.min(allocatedValue, upper) - lower);
+    taxPerOwner += taxableSlice * (bracket.rate || 0);
+  }
+
+  return taxPerOwner * owners;
+}
+
 function amsValueEoy(model, purchaseYear, year, owned) {
   if (!owned || year < purchaseYear) return 0;
   return model.amsPrice * Math.pow(1 + model.amsAppreciation, year - purchaseYear + 1);
@@ -509,6 +545,7 @@ function simulateScenario(model, key) {
   let nlLoan = model.amsLoan;
   let reservedDownpayment = 0;
   let totalTax = 0;
+  let totalSecondPropertyTax = 0;
   const rows = [];
 
   for (let year = model.projectionStartYear; year <= model.projectionEndYear; year += 1) {
@@ -595,8 +632,11 @@ function simulateScenario(model, key) {
     }
 
     const ltDebt = ltSold || ltRepaid ? 0 : debtEoy(ltSchedule, year, model.ltLoanAmount);
-    const ltMarket = ltValueEoy(model, year, ltSold || ltRepaid ? false : false);
+    const ltMarket = ltValueEoy(model, year, false);
     const ltValueVisible = ltSold ? 0 : ltMarket;
+    const secondPropertyTax = ltSold ? 0 : calculateSecondPropertyTax(model, ltMarket);
+    totalSecondPropertyTax += secondPropertyTax;
+    spendFromEtf(state, secondPropertyTax, "2nd property local tax");
     const ltEquity = ltSold ? 0 : Math.max(0, ltMarket - ltDebt);
 
     const nlDebt = nlOwned ? debtEoy(nlSchedule, year, nlLoan) : 0;
@@ -619,6 +659,7 @@ function simulateScenario(model, key) {
       totalNetWorth,
       realNetWorth,
       box3Tax: tax,
+      secondPropertyTax,
       events: state.events.join("; "),
     });
   }
@@ -636,6 +677,7 @@ function simulateScenario(model, key) {
     rows,
     final: last,
     totalBox3Tax: totalTax,
+    totalSecondPropertyTax,
     liquidityShortfall: state.shortfall,
     feasible: state.shortfall <= 0,
     comment,
@@ -761,6 +803,7 @@ function renderSummary(result) {
       formatCurrency(r.totalNetWorth),
       formatCurrency(r.realNetWorth),
       formatCurrency(s.totalBox3Tax),
+      formatCurrency(s.totalSecondPropertyTax || 0),
       formatCurrency(s.liquidityShortfall),
       s.comment,
     ];
@@ -768,7 +811,7 @@ function renderSummary(result) {
     values.forEach((v, i) => {
       const td = tr.insertCell();
       td.textContent = v;
-      if (i === 0 || i === 9) td.style.textAlign = "left";
+      if (i === 0 || i === 10) td.style.textAlign = "left";
     });
   });
 
@@ -802,13 +845,14 @@ function renderDetails(result) {
       fmtEUR.format(r.totalNetWorth),
       fmtEUR.format(r.realNetWorth),
       fmtEUR.format(r.box3Tax),
+      fmtEUR.format(r.secondPropertyTax || 0),
       r.events,
     ];
 
     values.forEach((v, i) => {
       const td = tr.insertCell();
       td.textContent = v;
-      if (i === 0 || i === 11) td.style.textAlign = "left";
+      if (i === 0 || i === 12) td.style.textAlign = "left";
     });
   });
 }
@@ -852,6 +896,26 @@ function niceCeil(value) {
   return nice * power;
 }
 
+function showChartTooltip(event, payload) {
+  const tooltip = document.getElementById("chartTooltip");
+  const wrap = document.querySelector(".chart-wrap");
+  if (!tooltip || !wrap) return;
+
+  tooltip.innerHTML = `<strong>${payload.label}</strong><div>Year: ${payload.year}</div><div>Total net worth: ${fmtEUR.format(payload.value)}</div>`;
+  tooltip.classList.remove("hidden");
+
+  const rect = wrap.getBoundingClientRect();
+  const x = event.clientX - rect.left + 14;
+  const y = event.clientY - rect.top + 14;
+  tooltip.style.left = `${Math.min(x, rect.width - 220)}px`;
+  tooltip.style.top = `${Math.min(y, rect.height - 90)}px`;
+}
+
+function hideChartTooltip() {
+  if (chartSelectedPoint) return;
+  document.getElementById("chartTooltip")?.classList.add("hidden");
+}
+
 function renderChart(result) {
   const svg = document.getElementById("chart");
   if (!svg) return;
@@ -873,10 +937,15 @@ function renderChart(result) {
   const values = allRows.map(r => r.totalNetWorth);
   const xMin = Math.min(...years);
   const xMax = Math.max(...years);
-  const yMax = niceCeil(Math.max(...values));
+
+  const yMaxRaw = Math.max(...values);
+  const yMaxFull = niceCeil(yMaxRaw);
+  const zoom = Math.max(1, chartZoom || 1);
+  const yMax = Math.max(1, yMaxFull / zoom);
+
   const xRange = Math.max(1, xMax - xMin);
   const xScale = year => margin.left + ((year - xMin) / xRange) * plotW;
-  const yScale = value => margin.top + ((yMax - value) / yMax) * plotH;
+  const yScale = value => margin.top + ((yMax - Math.min(value, yMax)) / yMax) * plotH;
 
   for (let i = 0; i <= 5; i += 1) {
     const value = yMax * i / 5;
@@ -898,18 +967,37 @@ function renderChart(result) {
       y: yScale(r.totalNetWorth),
       year: r.year,
       value: r.totalNetWorth,
+      label: def.label,
+      color: def.color,
     }));
+
     const path = points.map((p, i) => `${i ? "L" : "M"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
     svg.appendChild(svgEl("path", { d: path, class: "chart-line", stroke: def.color }));
+
     points.forEach(p => {
-      const c = svgEl("circle", { cx: p.x, cy: p.y, r: 3.2, fill: def.color, class: "chart-point" });
+      const c = svgEl("circle", { cx: p.x, cy: p.y, r: 3.5, fill: def.color, class: "chart-point" });
+      c.addEventListener("mouseenter", event => showChartTooltip(event, p));
+      c.addEventListener("mousemove", event => showChartTooltip(event, p));
+      c.addEventListener("mouseleave", hideChartTooltip);
+      c.addEventListener("click", event => {
+        chartSelectedPoint = p;
+        showChartTooltip(event, p);
+      });
       const title = svgEl("title");
       title.textContent = `${def.label}, ${p.year}: ${fmtEUR.format(p.value)}`;
       c.appendChild(title);
       svg.appendChild(c);
     });
   });
+
+  svg.addEventListener("click", event => {
+    if (event.target === svg) {
+      chartSelectedPoint = null;
+      document.getElementById("chartTooltip")?.classList.add("hidden");
+    }
+  }, { once: true });
 }
+
 
 function renderInflationCalculator() {
   const amount = inputNumber("inflationAmount");
@@ -1014,6 +1102,7 @@ function getCurrentSummarySnapshot(result) {
       { key: `${s.key}.totalNetWorth`, label: `${prefix} · Total net worth`, value: r.totalNetWorth || 0, type: "higher" },
       { key: `${s.key}.realNetWorth`, label: `${prefix} · Inflation-adjusted net worth`, value: r.realNetWorth || 0, type: "higher" },
       { key: `${s.key}.totalBox3Tax`, label: `${prefix} · Total Box 3 tax`, value: s.totalBox3Tax || 0, type: "lower" },
+      { key: `${s.key}.totalSecondPropertyTax`, label: `${prefix} · Total 2nd property tax`, value: s.totalSecondPropertyTax || 0, type: "lower" },
       { key: `${s.key}.liquidityShortfall`, label: `${prefix} · Liquidity shortfall`, value: s.liquidityShortfall || 0, type: "lower" }
     );
   });
@@ -1141,17 +1230,17 @@ function calculate() {
     console.error(error);
     const tbody = document.querySelector("#summaryTable tbody");
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="10" style="text-align:left;color:#b42318">Calculation error: ${error.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:left;color:#b42318">Calculation error: ${error.message}</td></tr>`;
     }
   }
 }
 
 function downloadCsv() {
   const result = window.__lastResult || simulateAll();
-  const rows = [["Scenario", "Year", "ETF", "2nd property value", "2nd mortgage debt", "2nd property equity", "NL property value", "NL mortgage debt", "NL property equity", "Total net worth", "Real net worth", "Box 3 tax", "Events"]];
+  const rows = [["Scenario", "Year", "ETF", "2nd property value", "2nd mortgage debt", "2nd property equity", "NL property value", "NL mortgage debt", "NL property equity", "Total net worth", "Real net worth", "Box 3 tax", "2nd property tax", "Events"]];
   Object.values(result.scenarios).forEach(s => s.rows.forEach(r => rows.push([
     s.label, r.year, r.etf.toFixed(2), r.ltMarketValue.toFixed(2), r.ltDebt.toFixed(2), r.ltEquity.toFixed(2),
-    r.amsValue.toFixed(2), r.amsDebt.toFixed(2), r.amsEquity.toFixed(2), r.totalNetWorth.toFixed(2), r.realNetWorth.toFixed(2), r.box3Tax.toFixed(2), r.events
+    r.amsValue.toFixed(2), r.amsDebt.toFixed(2), r.amsEquity.toFixed(2), r.totalNetWorth.toFixed(2), r.realNetWorth.toFixed(2), r.box3Tax.toFixed(2), (r.secondPropertyTax || 0).toFixed(2), r.events
   ])));
   const csv = rows.map(row => row.map(x => `"${String(x).replaceAll('"', '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -1243,6 +1332,9 @@ function init() {
   addEtfContributionRow({ amount: 10000, frequency: "Yearly", month: 1, startYear: 2026, endYear: 2028 });
   addEtfContributionRow({ amount: 16500, frequency: "Yearly", month: 1, startYear: 2029, endYear: 2045 });
   addLumpContributionRow({ amount: 0, year: 2026, month: 1, destination: "2nd repayment", description: "optional" });
+  addSecondPropertyTaxBracketRow({ lower: 150000, upper: 300000, rate: 0.5 });
+  addSecondPropertyTaxBracketRow({ lower: 300000, upper: 500000, rate: 1 });
+  addSecondPropertyTaxBracketRow({ lower: 500000, upper: null, rate: 2 });
 
   document.querySelectorAll("input,select").forEach(el => {
     el.addEventListener("input", calculate);
@@ -1259,6 +1351,10 @@ function init() {
   document.getElementById("addEtfContribution")?.addEventListener("click", () => { addEtfContributionRow(); calculate(); });
   document.getElementById("addLumpContribution")?.addEventListener("click", () => { addLumpContributionRow(); calculate(); });
   document.getElementById("downloadCsv")?.addEventListener("click", downloadCsv);
+  document.getElementById("addSecondPropertyTaxBracket")?.addEventListener("click", () => { addSecondPropertyTaxBracketRow(); calculate(); });
+  document.getElementById("chartZoomIn")?.addEventListener("click", () => { chartZoom = Math.min(8, chartZoom * 1.4); if (window.__lastResult) renderChart(window.__lastResult); });
+  document.getElementById("chartZoomOut")?.addEventListener("click", () => { chartZoom = Math.max(1, chartZoom / 1.4); if (window.__lastResult) renderChart(window.__lastResult); });
+  document.getElementById("chartZoomReset")?.addEventListener("click", () => { chartZoom = 1; chartSelectedPoint = null; document.getElementById("chartTooltip")?.classList.add("hidden"); if (window.__lastResult) renderChart(window.__lastResult); });
   window.addEventListener("resize", () => { if (window.__lastResult) renderChart(window.__lastResult); });
 
   setupTabs();

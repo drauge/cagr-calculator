@@ -87,3 +87,54 @@ body.dark .diff-good {
 body.dark .diff-bad {
   color: #fca5a5;
 }
+
+
+/* Interactive chart */
+.chart-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.chart-zoom-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.chart-wrap {
+  position: relative;
+}
+
+.chart-tooltip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  box-shadow: 0 6px 18px var(--shadow);
+  font-size: 0.85rem;
+  min-width: 190px;
+}
+
+.chart-tooltip strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.chart-point {
+  cursor: pointer;
+}
+
+.chart-point:hover {
+  r: 5;
+}
+
+#secondPropertyTaxTable {
+  min-width: 720px;
+}
