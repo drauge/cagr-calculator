@@ -153,6 +153,14 @@ function addEtfContributionRow({ amount = 0, frequency = "Yearly", month = 1, st
 
 
 
+
+function addNlFinancingLoadRow({ year = 2025, financingLoadPct = 24.6 } = {}) {
+  const row = document.querySelector("#nlFinancingLoadTable tbody").insertRow();
+  addInputCell(row, "number", year, { min: "2000", max: "2100" });
+  addInputCell(row, "number", financingLoadPct, { min: "0", max: "100", step: "0.1" });
+  addRemoveButton(row);
+}
+
 function addNlBox1RateRow({ year = 2026, bracket1UpTo = 38883, rate1 = 35.75, bracket2UpTo = 78426, rate2 = 37.56, topRate = 49.5, deductionCap = 37.56 } = {}) {
   const row = document.querySelector("#nlBox1RateTable tbody").insertRow();
   addInputCell(row, "number", year, { min: "2000", max: "2100" });
@@ -175,13 +183,13 @@ function addNlEwfRow({ year = 2026, wozValue = 650000, normalRate = 0.35, highTh
   addRemoveButton(row);
 }
 
-function addSalaryBonusRow({ amount = 128000, frequency = "Yearly", month = 1, startYear = 2025, endYear = 2053, description = "salary+bonus" } = {}) {
+function addSalaryBonusRow({ amount = 118000, frequency = "Yearly", month = 1, startYear = 2025, increaseOverride = "", description = "gross salary+bonus" } = {}) {
   const row = document.querySelector("#salaryBonusTable tbody").insertRow();
   addInputCell(row, "number", amount, { min: "0", step: "100" });
   addSelectCell(row, frequency, ["Yearly", "Monthly"]);
   addInputCell(row, "number", month, { min: "1", max: "12", step: "1" });
   addInputCell(row, "number", startYear, { min: "2000", max: "2100" });
-  addInputCell(row, "number", endYear, { min: "2000", max: "2100" });
+  addInputCell(row, "number", increaseOverride, { step: "0.1", placeholder: "default" });
   addInputCell(row, "text", description);
   addRemoveButton(row);
 }
@@ -264,6 +272,12 @@ function readModel() {
     amsLoan: inputNumber("amsLoan") || inputNumber("amsPrice"),
     amsRate: inputPct("amsRate"),
     amsMonths: Math.max(1, Math.round(inputNumber("amsMonths") || 360)),
+    nlOtherAnnualObligations: inputNumber("nlOtherAnnualObligations"),
+    nlUseOfferedRateAsTestRate: (document.getElementById("nlUseOfferedRateAsTestRate")?.value || "yes") === "yes",
+    nlFinancingLoadRows: tableRows("#nlFinancingLoadTable").map(([year, financingLoadPct]) => ({
+      year: Math.round(n(year, start)),
+      financingLoadPct: n(financingLoadPct) / 100,
+    })).sort((a, b) => a.year - b.year),
     nlBox1RateRows: tableRows("#nlBox1RateTable").map(([year, bracket1UpTo, rate1, bracket2UpTo, rate2, topRate, deductionCap]) => ({
       year: Math.round(n(year, start)),
       bracket1UpTo: n(bracket1UpTo),
@@ -280,14 +294,14 @@ function readModel() {
       highThreshold: n(highThreshold),
       highRate: n(highRate) / 100,
     })).sort((a, b) => a.year - b.year),
-    salaryBonusRows: tableRows("#salaryBonusTable").map(([amount, frequency, month, startYear, endYear, description]) => ({
+    salaryBonusRows: tableRows("#salaryBonusTable").map(([amount, frequency, month, startYear, increaseOverride, description]) => ({
       amount: n(amount),
       frequency,
       month: Math.round(n(month, 1)),
       startYear: Math.round(n(startYear, start)),
-      endYear: Math.round(n(endYear, retirement)),
+      increaseOverride: increaseOverride === "" ? null : n(increaseOverride) / 100,
       description,
-    })),
+    })).sort((a, b) => a.startYear - b.startYear),
     amsAppreciation: inputPct("amsAppreciation"),
     amsCosts: inputNumber("amsCosts"),
     ownershipCosts: inputNumber("ownershipCosts"),
@@ -424,6 +438,60 @@ function buildLtSchedule(model) {
   return rows;
 }
 
+
+function activeNlFinancingLoadPct(model, year) {
+  const rows = (model.nlFinancingLoadRows || []).filter(r => r.year <= year);
+  return rows.length ? rows.at(-1).financingLoadPct : 0.246;
+}
+
+function nlMortgageTestRate(model) {
+  /*
+    Dutch LTI rules use the offered debit rate for fixed-rate periods of 10 years
+    or longer; for shorter fixed-rate periods, the AFM test rate is used. The
+    model uses 5% as the test-rate fallback input.
+  */
+  return model.nlUseOfferedRateAsTestRate ? (model.amsRate || 0) : 0.05;
+}
+
+function maxLoanFromAnnualPayment(annualPayment, annualRate, months) {
+  const payment = Math.max(0, annualPayment || 0) / 12;
+  const monthlyRate = (annualRate || 0) / 12;
+  const nMonths = Math.max(1, months || 360);
+
+  if (payment <= 0) return 0;
+  if (Math.abs(monthlyRate) < 1e-12) return payment * nMonths;
+
+  return payment * (1 - Math.pow(1 + monthlyRate, -nMonths)) / monthlyRate;
+}
+
+function calculateMaxNlMortgageForYear(model, purchaseYear, propertyPrice) {
+  const income = annualSalaryBonusIncome(model, purchaseYear);
+  const financingLoadPct = activeNlFinancingLoadPct(model, purchaseYear);
+  const annualCapacityBeforeObligations = income * financingLoadPct;
+  const annualCapacity = Math.max(0, annualCapacityBeforeObligations - (model.nlOtherAnnualObligations || 0));
+  const testRate = nlMortgageTestRate(model);
+  const incomeBasedMax = maxLoanFromAnnualPayment(annualCapacity, testRate, model.amsMonths);
+
+  /*
+    LTV cap: standard Dutch mortgage cannot exceed 100% of property value
+    before special energy-saving exceptions. Purchase costs are not financed here.
+  */
+  const ltvMax = Math.max(0, propertyPrice || 0);
+  const maxMortgage = Math.min(incomeBasedMax, ltvMax);
+
+  return {
+    income,
+    financingLoadPct,
+    annualCapacityBeforeObligations,
+    annualCapacity,
+    testRate,
+    incomeBasedMax,
+    ltvMax,
+    maxMortgage,
+    externalDownpaymentRequired: Math.max(0, (propertyPrice || 0) - maxMortgage),
+  };
+}
+
 function buildAmsSchedule(model, purchaseYear, loan) {
   let balance = loan;
   const monthlyRate = model.amsRate / 12;
@@ -508,16 +576,20 @@ function calculateBox1Tax(income, rates) {
 }
 
 function annualSalaryBonusIncome(model, year) {
-  const wageGrowth = Math.max(0, (model.personalInflation || 0) - 0.011);
-  return (model.salaryBonusRows || []).reduce((sum, row) => {
-    if (row.amount <= 0 || year < row.startYear || year > row.endYear) return sum;
+  const rows = (model.salaryBonusRows || [])
+    .filter(row => row.amount > 0 && row.startYear <= year)
+    .sort((a, b) => a.startYear - b.startYear);
 
-    const years = Math.max(0, year - row.startYear);
-    const indexedAmount = row.amount * Math.pow(1 + wageGrowth, years);
+  if (!rows.length) return 0;
 
-    if (row.frequency === "Monthly") return sum + indexedAmount * 12;
-    return sum + indexedAmount;
-  }, 0);
+  const row = rows.at(-1);
+  const defaultGrowth = Math.max(0, (model.personalInflation || 0) - 0.011);
+  const growth = row.increaseOverride === null || row.increaseOverride === undefined ? defaultGrowth : row.increaseOverride;
+  const years = Math.max(0, year - row.startYear);
+  const indexedAmount = row.amount * Math.pow(1 + growth, years);
+
+  if (row.frequency === "Monthly") return indexedAmount * 12;
+  return indexedAmount;
 }
 
 function nlWozValueForYear(model, year) {
@@ -669,14 +741,11 @@ function nlPurchasePriceForYear(model, purchaseYear) {
 
   const years = Math.max(0, purchaseYear - model.projectionStartYear);
   /*
-    The entered NL purchase price is in today's money. Future purchase price is
-    inflated by personal inflation and by NL property appreciation. This is deliberately
-    conservative: it treats general purchasing-power erosion and local property-market
-    appreciation as separate drivers.
+    The entered NL purchase price is in today's money. Forecast uses NL property
+    appreciation only. Personal inflation is not compounded into the property price,
+    because property appreciation is treated as a nominal property-price forecast.
   */
-  return (model.amsPrice || 0) *
-    Math.pow(1 + (model.personalInflation || 0), years) *
-    Math.pow(1 + (model.amsAppreciation || 0), years);
+  return (model.amsPrice || 0) * Math.pow(1 + (model.amsAppreciation || 0), years);
 }
 
 function nlPropertyValueEoyFromPurchasePrice(model, purchasePrice, purchaseYear, year, owned) {
@@ -1053,15 +1122,16 @@ function simulateScenario(model, key) {
       nlPurchasePriceUsed = nlPurchasePriceForYear(model, year);
 
       /*
-        NL property is bought with external liquidity. ETF is not liquidated for
-        the purchase and 2nd-property proceeds are not used as NL downpayment.
-        0-downpayment modelling means mortgage equals the scenario purchase price.
+        NL property price is scenario-year specific. The mortgage is capped by the
+        estimated Dutch income/LTV maximum. Any gap is external liquidity/downpayment.
+        ETF is not liquidated for the purchase.
       */
-      nlLoan = nlPurchasePriceUsed;
+      const nlMortgageCapacity = calculateMaxNlMortgageForYear(model, year, nlPurchasePriceUsed);
+      nlLoan = nlMortgageCapacity.maxMortgage;
       nlSchedule = buildAmsSchedule(model, year, nlLoan);
 
-      recordHousingCashflowShortfall(state, Math.max(0, model.amsCosts || 0), "NL property purchase costs");
-      state.events.push(`NL property purchased externally at ${fmtEUR2.format(nlPurchasePriceUsed)}; mortgage ${fmtEUR2.format(nlLoan)}`);
+      recordHousingCashflowShortfall(state, Math.max(0, model.amsCosts || 0) + nlMortgageCapacity.externalDownpaymentRequired, "NL property external liquidity need");
+      state.events.push(`NL property purchased externally at ${fmtEUR2.format(nlPurchasePriceUsed)}; max mortgage ${fmtEUR2.format(nlLoan)}; external need ${fmtEUR2.format(nlMortgageCapacity.externalDownpaymentRequired)}`);
     }
 
     let contributions = 0;
@@ -1123,6 +1193,8 @@ function simulateScenario(model, key) {
       ltDebt,
       ltEquity,
       nlPurchasePriceUsed,
+      nlMaxMortgageAmount: nlOwned ? calculateMaxNlMortgageForYear(model, sc.purchaseYear || year, nlPurchasePriceUsed).maxMortgage : 0,
+      nlExternalDownpaymentRequired: nlOwned ? calculateMaxNlMortgageForYear(model, sc.purchaseYear || year, nlPurchasePriceUsed).externalDownpaymentRequired : 0,
       amsValue: nlValue,
       amsDebt: nlDebt,
       amsEquity: nlEquity,
@@ -1333,6 +1405,8 @@ function renderDetails(result) {
       fmtEUR.format(r.ltDebt),
       fmtEUR.format(r.ltEquity),
       fmtEUR.format(r.nlPurchasePriceUsed || 0),
+      fmtEUR.format(r.nlMaxMortgageAmount || 0),
+      fmtEUR.format(r.nlExternalDownpaymentRequired || 0),
       fmtEUR.format(r.amsValue),
       fmtEUR.format(r.amsDebt),
       fmtEUR.format(r.amsEquity),
@@ -1354,7 +1428,7 @@ function renderDetails(result) {
     values.forEach((v, i) => {
       const td = tr.insertCell();
       td.textContent = v;
-      if (i === 0 || i === 21) td.style.textAlign = "left";
+      if (i === 0 || i === 23) td.style.textAlign = "left";
     });
   });
 }
@@ -1965,10 +2039,10 @@ function calculate() {
 
 function downloadCsv() {
   const result = window.__lastResult || simulateAll();
-  const rows = [["Scenario", "Year", "ETF", "2nd property value", "2nd mortgage debt", "2nd property equity", "NL purchase price used", "NL property value", "NL mortgage debt", "NL property equity", "NL gross mortgage/month", "NL tax benefit/month", "NL net mortgage/month", "Total net worth", "Real net worth", "Box 3 tax", "Box 3 treaty relief", "Box 3 foreign real estate value", "Box 3 exempt debt allocation", "Box 3 Dutch debt allocation", "2nd property taxable value", "2nd property tax", "Events"]];
+  const rows = [["Scenario", "Year", "ETF", "2nd property value", "2nd mortgage debt", "2nd property equity", "NL purchase price used", "NL max mortgage amount", "NL external downpayment required", "NL property value", "NL mortgage debt", "NL property equity", "NL gross mortgage/month", "NL tax benefit/month", "NL net mortgage/month", "Total net worth", "Real net worth", "Box 3 tax", "Box 3 treaty relief", "Box 3 foreign real estate value", "Box 3 exempt debt allocation", "Box 3 Dutch debt allocation", "2nd property taxable value", "2nd property tax", "Events"]];
   Object.values(result.scenarios).forEach(s => s.rows.forEach(r => rows.push([
     s.label, r.year, r.etf.toFixed(2), r.ltMarketValue.toFixed(2), r.ltDebt.toFixed(2), r.ltEquity.toFixed(2),
-    (r.nlPurchasePriceUsed || 0).toFixed(2), r.amsValue.toFixed(2), r.amsDebt.toFixed(2), r.amsEquity.toFixed(2), (r.nlGrossMortgageMonthly || 0).toFixed(2), (r.nlMortgageTaxBenefitMonthly || 0).toFixed(2), (r.nlNetMortgageMonthly || 0).toFixed(2), r.totalNetWorth.toFixed(2), r.realNetWorth.toFixed(2), r.box3Tax.toFixed(2), (r.box3TreatyRelief || 0).toFixed(2), (r.box3ForeignRealEstate || 0).toFixed(2), (r.box3ExemptDebtAllocation || 0).toFixed(2), (r.box3DutchDebtAllocation || 0).toFixed(2), (r.secondPropertyTaxableValue || 0).toFixed(2), (r.secondPropertyTax || 0).toFixed(2), r.events
+    (r.nlPurchasePriceUsed || 0).toFixed(2), (r.nlMaxMortgageAmount || 0).toFixed(2), (r.nlExternalDownpaymentRequired || 0).toFixed(2), r.amsValue.toFixed(2), r.amsDebt.toFixed(2), r.amsEquity.toFixed(2), (r.nlGrossMortgageMonthly || 0).toFixed(2), (r.nlMortgageTaxBenefitMonthly || 0).toFixed(2), (r.nlNetMortgageMonthly || 0).toFixed(2), r.totalNetWorth.toFixed(2), r.realNetWorth.toFixed(2), r.box3Tax.toFixed(2), (r.box3TreatyRelief || 0).toFixed(2), (r.box3ForeignRealEstate || 0).toFixed(2), (r.box3ExemptDebtAllocation || 0).toFixed(2), (r.box3DutchDebtAllocation || 0).toFixed(2), (r.secondPropertyTaxableValue || 0).toFixed(2), (r.secondPropertyTax || 0).toFixed(2), r.events
   ])));
   const csv = rows.map(row => row.map(x => `"${String(x).replaceAll('"', '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -2116,12 +2190,14 @@ function init() {
   initTheme();
   syncExecutionYearInputs();
 
+  addNlFinancingLoadRow({ year: 2025, financingLoadPct: 24.6 });
+  addNlFinancingLoadRow({ year: 2026, financingLoadPct: 24.6 });
   addNlMortgageDeductionScheduleDefaults();
   addRateRow({ effectiveFrom: "2025-08-25", euribor: 2.08 });
   addRateRow({ effectiveFrom: "2026-01-01", euribor: 2.12 });
   addEtfContributionRow({ amount: 10000, frequency: "Yearly", month: 1, startYear: 2026, endYear: 2028 });
   addEtfContributionRow({ amount: 16500, frequency: "Yearly", month: 1, startYear: 2029, endYear: 2045 });
-  addSalaryBonusRow({ amount: 118000, frequency: "Yearly", month: 1, startYear: 2025, endYear: 2054, description: "gross salary+bonus" });
+  addSalaryBonusRow({ amount: 118000, frequency: "Yearly", month: 1, startYear: 2025, increaseOverride: "", description: "gross salary+bonus" });
   addLumpContributionRow({ amount: 0, year: 2026, month: 1, destination: "2nd repayment", description: "optional" });
   addSecondPropertyTaxBracketRow({ lower: 150000, upper: 300000, rate: 0.5 });
   addSecondPropertyTaxBracketRow({ lower: 300000, upper: 500000, rate: 1 });
@@ -2138,6 +2214,7 @@ function init() {
   });
 
   document.getElementById("personalInflation")?.addEventListener("input", calculate);
+  document.getElementById("addNlFinancingLoadRow")?.addEventListener("click", () => { addNlFinancingLoadRow(); calculate(); });
   document.getElementById("addNlBox1RateRow")?.addEventListener("click", () => { addNlBox1RateRow(); calculate(); });
   document.getElementById("addNlEwfRow")?.addEventListener("click", () => { addNlEwfRow(); calculate(); });
   document.getElementById("addRateRow")?.addEventListener("click", () => { addRateRow(); calculate(); });

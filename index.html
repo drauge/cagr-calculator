@@ -81,6 +81,7 @@
 <label>2nd mortgage term months <input id="ltMonths" type="number" value="240"/></label>
 <label>2nd mortgage margin over Euribor6M (%) <input id="ltMargin" type="number" value="1.57" step="0.01"/></label>
 <label>2nd property annual appreciation (%) <input id="ltAppreciation" type="number" value="3.6" step="0.1"/></label>
+<p class="note">2nd property value forecast uses appreciation only; inflation is not compounded into the property value.</p>
 </div>
 
 
@@ -118,7 +119,7 @@
 <label>Calculated net mortgage payment/month (EUR) <input id="amsNetMortgagePaymentPreview" type="number" readonly/></label>
 <label>Mortgage interest tax benefit/month (EUR) <input id="amsMortgageTaxBenefitPreview" type="number" readonly/></label>
 <label>NL property annual appreciation (%) <input id="amsAppreciation" type="number" value="5.0" step="0.1"/></label>
-<p class="note">Future NL purchase price = today’s purchase price × personal inflation growth × NL property appreciation growth until the scenario purchase year. NL mortgage amount is set equal to that scenario purchase price. NL property purchases are funded with external liquidity; ETF contributions are not liquidated for the purchase.</p>
+<p class="note">Future NL purchase price = today’s purchase price × NL property appreciation growth until the scenario purchase year. Personal inflation is not compounded into the property price. NL mortgage amount is capped by the calculated Dutch maximum mortgage amount for that purchase year. NL property purchases are funded with external liquidity; ETF contributions are not liquidated for the purchase.</p>
 <label>Purchase costs (EUR) <input id="amsCosts" type="number" value="25000"/></label>
 <label>Monthly ownership costs (EUR) <input id="ownershipCosts" type="number" value="0"/></label>
 <label>Rent avoided (EUR / month) <input id="rentAvoided" type="number" value="2300"/></label>
@@ -129,6 +130,23 @@
 <p class="note">
   Fluctuating Dutch own-home deduction assumptions are entered as yearly schedules. The active row is the latest row with year ≤ calculation year.
 </p>
+
+
+<h4>Maximum NL mortgage capacity assumptions</h4>
+<p class="note">
+  Official structure: maximum mortgage is constrained by property value and income. The income test uses toetsinkomen × financing-load percentage to get maximum annual mortgage costs, then converts that annual annuity capacity into a maximum loan. Add future rows when financing-load percentages are known; otherwise last known values are carried forward.
+</p>
+<div class="grid">
+<label>Other annual financial obligations (EUR) <input id="nlOtherAnnualObligations" type="number" value="0" step="100"/></label>
+<label>Use offered NL mortgage rate as test rate?
+  <select id="nlUseOfferedRateAsTestRate"><option value="yes" selected>yes, fixed period ≥10y</option><option value="no">no, use 5% test rate</option></select>
+</label>
+</div>
+<div class="section-head">
+  <p class="note">Financing-load percentage schedule. This is the missing official input lenders use from annual tables based on income and test rate.</p>
+  <button id="addNlFinancingLoadRow" type="button">Add financing-load row</button>
+</div>
+<div class="table-wrap"><table id="nlFinancingLoadTable"><thead><tr><th>Year</th><th>Financing-load percentage (%)</th><th></th></tr></thead><tbody></tbody></table></div>
 
 <h4>Box 1 tax / mortgage deduction schedule</h4>
 <div class="section-head">
@@ -147,8 +165,8 @@
 <p id="nlMortgageTaxWarning" class="note warning"></p>
 
 <h3>Gross salary + bonus for mortgage deduction</h3>
-<div class="section-head"><p class="note">Used to estimate Box 1 tax benefit from mortgage interest deduction. Forecast salary/bonus rows are grown annually by max(0, Personal inflation - 1.1 percentage points), so the default income keeps partial real wage growth below personal inflation.</p><button id="addSalaryBonusRow" type="button">Add income row</button></div>
-<div class="table-wrap"><table id="salaryBonusTable"><thead><tr><th>Amount (EUR)</th><th>Frequency</th><th>Month</th><th>Start year</th><th>End year</th><th>Description</th><th></th></tr></thead><tbody></tbody></table></div>
+<div class="section-head"><p class="note">Used to estimate Box 1 tax benefit from mortgage interest deduction. Gross salary + bonus uses the latest row whose start year is ≤ the calculation year. From that row's start year onward, income grows by max(0, Personal inflation - 1.1 percentage points) unless that row provides an explicit annual increase override.</p><button id="addSalaryBonusRow" type="button">Add income row</button></div>
+<div class="table-wrap"><table id="salaryBonusTable"><thead><tr><th>Amount (EUR)</th><th>Frequency</th><th>Month</th><th>Start year</th><th>Annual increase override (%)</th><th>Description</th><th></th></tr></thead><tbody></tbody></table></div>
 
 <h3>Euribor6M schedule</h3>
 <div class="section-head"><p class="note">Used for the 2nd-property-abroad mortgage forecast.</p><button id="addRateRow" type="button">Add rate row</button></div>
@@ -289,7 +307,7 @@
 <button class="detail-tab-button" data-detail="D" type="button">Scenario D</button>
 </div>
 <div class="table-wrap result-wrap"><table id="detailsTable">
-<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL purchase price used</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>NL gross mortgage/month</th><th>NL tax benefit/month</th><th>NL net mortgage/month</th><th>Box 1 tax before own-home deduction</th><th>Box 1 tax after own-home deduction</th><th>NL property tax deduction/year</th><th>Eigenwoningforfait</th><th>Gross salary + bonus</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Box 3 treaty relief</th><th>Box 3 foreign real estate value</th><th>Box 3 exempt debt allocation</th><th>Box 3 Dutch debt allocation</th><th>2nd property taxable value</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
+<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL purchase price used</th><th>NL max mortgage amount</th><th>NL external downpayment required</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>NL gross mortgage/month</th><th>NL tax benefit/month</th><th>NL net mortgage/month</th><th>Box 1 tax before own-home deduction</th><th>Box 1 tax after own-home deduction</th><th>NL property tax deduction/year</th><th>Eigenwoningforfait</th><th>Gross salary + bonus</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Box 3 treaty relief</th><th>Box 3 foreign real estate value</th><th>Box 3 exempt debt allocation</th><th>Box 3 Dutch debt allocation</th><th>2nd property taxable value</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
 </table></div>
 </section>
 

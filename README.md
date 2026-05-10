@@ -517,3 +517,26 @@ Cashflow rules changed to match the intended scenario definitions:
   - No NL property purchase.
 - For scenarios with NL property, purchase costs are tracked as external-liquidity / affordability shortfall, not ETF liquidation.
 - Negative monthly housing cashflow continues to be tracked as shortfall rather than draining ETF.
+
+
+## v40 changes: appreciation-only property forecasts and NL mortgage capacity
+
+Changed:
+- NL property purchase price forecast now uses NL property appreciation only.
+- Personal inflation is no longer compounded into property prices.
+- 2nd property forecast remains appreciation-only.
+
+Salary forecast:
+- Salary/bonus table now uses start year only.
+- Latest row with start year <= calculation year applies.
+- Income grows by max(0, personal inflation - 1.1 percentage points), unless that row has an explicit annual increase override.
+
+NL maximum mortgage:
+- Added financing-load percentage schedule and other annual obligations.
+- Estimated maximum mortgage for the purchase year:
+  - forecast Box 1 income × financing-load percentage = max annual mortgage cost
+  - minus annual financial obligations
+  - converted into annuity loan capacity using test rate and term
+  - capped at 100% of property value
+- Scenarios A/B now use scenario-year property price and calculated max mortgage.
+- Any gap between purchase price and max mortgage is tracked as external downpayment / liquidity need.
