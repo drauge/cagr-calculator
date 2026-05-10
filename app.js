@@ -663,9 +663,31 @@ function calculateSecondPropertyTax(model, taxableValue) {
   return taxPerOwner * owners;
 }
 
-function amsValueEoy(model, purchaseYear, year, owned) {
+
+function nlPurchasePriceForYear(model, purchaseYear) {
+  if (!purchaseYear || purchaseYear < model.projectionStartYear) return model.amsPrice || 0;
+
+  const years = Math.max(0, purchaseYear - model.projectionStartYear);
+  /*
+    The entered NL purchase price is in today's money. Future purchase price is
+    inflated by personal inflation and by NL property appreciation. This is deliberately
+    conservative: it treats general purchasing-power erosion and local property-market
+    appreciation as separate drivers.
+  */
+  return (model.amsPrice || 0) *
+    Math.pow(1 + (model.personalInflation || 0), years) *
+    Math.pow(1 + (model.amsAppreciation || 0), years);
+}
+
+function nlPropertyValueEoyFromPurchasePrice(model, purchasePrice, purchaseYear, year, owned) {
   if (!owned || year < purchaseYear) return 0;
-  return model.amsPrice * Math.pow(1 + model.amsAppreciation, year - purchaseYear + 1);
+  return purchasePrice * Math.pow(1 + (model.amsAppreciation || 0), year - purchaseYear + 1);
+}
+
+
+function amsValueEoy(model, purchaseYear, year, owned) {
+  const purchasePrice = nlPurchasePriceForYear(model, purchaseYear);
+  return nlPropertyValueEoyFromPurchasePrice(model, purchasePrice, purchaseYear, year, owned);
 }
 
 function etfContribution(model, year, month) {
@@ -936,6 +958,7 @@ function simulateScenario(model, key) {
   let ltRepaid = false;
   let nlOwned = false;
   let nlSchedule = [];
+  let nlPurchasePriceUsed = 0;
   let nlLoan = model.amsLoan;
   let reservedDownpayment = 0;
   let totalTax = 0;
@@ -987,16 +1010,24 @@ function simulateScenario(model, key) {
 
     if ((key === "A" || key === "B") && year === sc.purchaseYear && !nlOwned) {
       nlOwned = true;
-      const downpayment = Math.min(reservedDownpayment, model.amsLoan);
-      nlLoan = Math.max(0, model.amsLoan - downpayment);
+      nlPurchasePriceUsed = nlPurchasePriceForYear(model, year);
+
+      /*
+        Mortgage amount follows the scenario purchase price. If sale proceeds are
+        allocated as a downpayment, they reduce the mortgage; otherwise 0-downpayment
+        means loan equals purchase price.
+      */
+      const downpayment = Math.min(reservedDownpayment, nlPurchasePriceUsed);
+      nlLoan = Math.max(0, nlPurchasePriceUsed - downpayment);
       reservedDownpayment = Math.max(0, reservedDownpayment - downpayment);
+
       nlSchedule = buildAmsSchedule(model, year, nlLoan);
       spendFromEtf(state, model.amsCosts, "NL property purchase costs");
       if (reservedDownpayment > 0) {
         state.etf += reservedDownpayment;
         reservedDownpayment = 0;
       }
-      state.events.push(`NL property purchased; mortgage ${fmtEUR2.format(nlLoan)}`);
+      state.events.push(`NL property purchased at ${fmtEUR2.format(nlPurchasePriceUsed)}; mortgage ${fmtEUR2.format(nlLoan)}`);
     }
 
     let contributions = 0;
@@ -1035,7 +1066,7 @@ function simulateScenario(model, key) {
     const ltEquity = ltSold ? 0 : Math.max(0, ltMarket - ltDebt);
 
     const nlDebt = nlOwned ? debtEoy(nlSchedule, year, nlLoan) : 0;
-    const nlValue = amsValueEoy(model, sc.purchaseYear || year, year, nlOwned);
+    const nlValue = nlPropertyValueEoyFromPurchasePrice(model, nlPurchasePriceUsed, sc.purchaseYear || year, year, nlOwned);
     const nlEquity = Math.max(0, nlValue - nlDebt);
     const nlMortgageInfo = nlOwned ? calculateNlMortgageYear(model, nlSchedule, year) : { grossMonthlyPayment: 0, taxBenefitMonthly: 0, netMonthlyPayment: 0, annualInterest: 0, eigenwoningforfait: 0, grossIncome: 0, warning: "" };
 
@@ -1049,6 +1080,7 @@ function simulateScenario(model, key) {
       ltMarketValue: ltValueVisible,
       ltDebt,
       ltEquity,
+      nlPurchasePriceUsed,
       amsValue: nlValue,
       amsDebt: nlDebt,
       amsEquity: nlEquity,
@@ -1257,6 +1289,7 @@ function renderDetails(result) {
       fmtEUR.format(r.ltMarketValue),
       fmtEUR.format(r.ltDebt),
       fmtEUR.format(r.ltEquity),
+      fmtEUR.format(r.nlPurchasePriceUsed || 0),
       fmtEUR.format(r.amsValue),
       fmtEUR.format(r.amsDebt),
       fmtEUR.format(r.amsEquity),
@@ -1278,7 +1311,7 @@ function renderDetails(result) {
     values.forEach((v, i) => {
       const td = tr.insertCell();
       td.textContent = v;
-      if (i === 0 || i === 20) td.style.textAlign = "left";
+      if (i === 0 || i === 21) td.style.textAlign = "left";
     });
   });
 }
@@ -1844,7 +1877,7 @@ function renderNlMortgagePreview(result) {
   if (!grossEl) return;
 
   const model = result?.model || readModel();
-  const loan = Math.max(0, model.amsPrice || model.amsLoan || 0); // 0-downpayment preview
+  const loan = Math.max(0, model.amsPrice || 0); // today's-price 0-downpayment preview
   const schedule = buildAmsSchedule(model, model.projectionStartYear, loan);
   const info = calculateNlMortgageYear(model, schedule, model.projectionStartYear);
 
@@ -1889,10 +1922,10 @@ function calculate() {
 
 function downloadCsv() {
   const result = window.__lastResult || simulateAll();
-  const rows = [["Scenario", "Year", "ETF", "2nd property value", "2nd mortgage debt", "2nd property equity", "NL property value", "NL mortgage debt", "NL property equity", "NL gross mortgage/month", "NL tax benefit/month", "NL net mortgage/month", "Total net worth", "Real net worth", "Box 3 tax", "Box 3 treaty relief", "Box 3 foreign real estate value", "Box 3 exempt debt allocation", "Box 3 Dutch debt allocation", "2nd property taxable value", "2nd property tax", "Events"]];
+  const rows = [["Scenario", "Year", "ETF", "2nd property value", "2nd mortgage debt", "2nd property equity", "NL purchase price used", "NL property value", "NL mortgage debt", "NL property equity", "NL gross mortgage/month", "NL tax benefit/month", "NL net mortgage/month", "Total net worth", "Real net worth", "Box 3 tax", "Box 3 treaty relief", "Box 3 foreign real estate value", "Box 3 exempt debt allocation", "Box 3 Dutch debt allocation", "2nd property taxable value", "2nd property tax", "Events"]];
   Object.values(result.scenarios).forEach(s => s.rows.forEach(r => rows.push([
     s.label, r.year, r.etf.toFixed(2), r.ltMarketValue.toFixed(2), r.ltDebt.toFixed(2), r.ltEquity.toFixed(2),
-    r.amsValue.toFixed(2), r.amsDebt.toFixed(2), r.amsEquity.toFixed(2), (r.nlGrossMortgageMonthly || 0).toFixed(2), (r.nlMortgageTaxBenefitMonthly || 0).toFixed(2), (r.nlNetMortgageMonthly || 0).toFixed(2), r.totalNetWorth.toFixed(2), r.realNetWorth.toFixed(2), r.box3Tax.toFixed(2), (r.box3TreatyRelief || 0).toFixed(2), (r.box3ForeignRealEstate || 0).toFixed(2), (r.box3ExemptDebtAllocation || 0).toFixed(2), (r.box3DutchDebtAllocation || 0).toFixed(2), (r.secondPropertyTaxableValue || 0).toFixed(2), (r.secondPropertyTax || 0).toFixed(2), r.events
+    (r.nlPurchasePriceUsed || 0).toFixed(2), r.amsValue.toFixed(2), r.amsDebt.toFixed(2), r.amsEquity.toFixed(2), (r.nlGrossMortgageMonthly || 0).toFixed(2), (r.nlMortgageTaxBenefitMonthly || 0).toFixed(2), (r.nlNetMortgageMonthly || 0).toFixed(2), r.totalNetWorth.toFixed(2), r.realNetWorth.toFixed(2), r.box3Tax.toFixed(2), (r.box3TreatyRelief || 0).toFixed(2), (r.box3ForeignRealEstate || 0).toFixed(2), (r.box3ExemptDebtAllocation || 0).toFixed(2), (r.box3DutchDebtAllocation || 0).toFixed(2), (r.secondPropertyTaxableValue || 0).toFixed(2), (r.secondPropertyTax || 0).toFixed(2), r.events
   ])));
   const csv = rows.map(row => row.map(x => `"${String(x).replaceAll('"', '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });

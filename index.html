@@ -110,14 +110,15 @@
 
 <h3>NL property & mortgage</h3>
 <div class="grid">
-<label>NL property purchase price (EUR) <input id="amsPrice" type="number" value="650000"/></label>
-<label>NL mortgage amount (EUR, 0 downpayment default) <input id="amsLoan" type="number" value="650000"/></label>
+<label>NL property purchase price today (EUR) <input id="amsPrice" type="number" value="650000"/></label>
+<label>NL mortgage amount (auto = scenario purchase price) <input id="amsLoan" type="number" value="650000"/></label>
 <label>NL mortgage rate (%) <input id="amsRate" type="number" value="4.06" step="0.01"/></label>
 <label>NL mortgage term months <input id="amsMonths" type="number" value="360"/></label>
 <label>Calculated gross mortgage payment/month (EUR) <input id="amsGrossMortgagePaymentPreview" type="number" readonly/></label>
 <label>Calculated net mortgage payment/month (EUR) <input id="amsNetMortgagePaymentPreview" type="number" readonly/></label>
 <label>Mortgage interest tax benefit/month (EUR) <input id="amsMortgageTaxBenefitPreview" type="number" readonly/></label>
 <label>NL property annual appreciation (%) <input id="amsAppreciation" type="number" value="5.0" step="0.1"/></label>
+<p class="note">Future NL purchase price = today’s purchase price × personal inflation growth × NL property appreciation growth until the scenario purchase year. NL mortgage amount is set equal to that scenario purchase price unless downpayment proceeds are explicitly allocated.</p>
 <label>Purchase costs (EUR) <input id="amsCosts" type="number" value="25000"/></label>
 <label>Monthly ownership costs (EUR) <input id="ownershipCosts" type="number" value="0"/></label>
 <label>Rent avoided (EUR / month) <input id="rentAvoided" type="number" value="2300"/></label>
@@ -287,7 +288,7 @@
 <button class="detail-tab-button" data-detail="D" type="button">Scenario D</button>
 </div>
 <div class="table-wrap result-wrap"><table id="detailsTable">
-<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>NL gross mortgage/month</th><th>NL tax benefit/month</th><th>NL net mortgage/month</th><th>Box 1 tax before own-home deduction</th><th>Box 1 tax after own-home deduction</th><th>NL property tax deduction/year</th><th>Eigenwoningforfait</th><th>Gross salary + bonus</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Box 3 treaty relief</th><th>Box 3 foreign real estate value</th><th>Box 3 exempt debt allocation</th><th>Box 3 Dutch debt allocation</th><th>2nd property taxable value</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
+<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL purchase price used</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>NL gross mortgage/month</th><th>NL tax benefit/month</th><th>NL net mortgage/month</th><th>Box 1 tax before own-home deduction</th><th>Box 1 tax after own-home deduction</th><th>NL property tax deduction/year</th><th>Eigenwoningforfait</th><th>Gross salary + bonus</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Box 3 treaty relief</th><th>Box 3 foreign real estate value</th><th>Box 3 exempt debt allocation</th><th>Box 3 Dutch debt allocation</th><th>2nd property taxable value</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
 </table></div>
 </section>
 
@@ -352,6 +353,7 @@
 <p id="pensionNote" class="note"></p>
 
 <h3>Retirement disposable income ranking</h3>
+<p class="note"><strong>Retirement affordability interpretation:</strong> scenarios with NL property test whether pension income covers the remaining gross mortgage payment; scenarios without NL property test whether pension income covers inflation-adjusted rent. Compare Disposable today’s EUR/month across scenarios.</p>
 <p class="note">
   For scenarios with NL property, disposable income subtracts gross NL mortgage payment. For scenarios without NL property, it subtracts future rent grown from Rent avoided using rent inflation.
 </p>

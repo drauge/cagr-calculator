@@ -445,3 +445,20 @@ Added explicit execution-year inputs:
 Added late execution sensitivity table:
 - compares Scenario B vs Scenario D for execution years in a user-selected range
 - answers whether B still beats D if the 2nd property cannot be sold in 2035 but can be sold later before retirement
+
+
+## v36 changes: future NL purchase price by scenario year
+
+Fixed future NL purchase modeling:
+- NL property purchase price input is treated as today's money.
+- For a scenario purchase year, future purchase price is:
+  - today's NL purchase price
+  - grown by personal inflation
+  - grown by NL property appreciation
+- NL mortgage amount is set equal to the scenario purchase price for 0-downpayment purchases.
+- If Scenario B allocates sale proceeds to downpayment, the mortgage is reduced by those proceeds.
+- NL property value, NL mortgage schedule, gross mortgage payment, net mortgage payment, NL equity, pension disposable income, and affordability calculations now depend on the scenario-specific purchase year and future purchase price.
+
+Goal alignment:
+- Scenarios with NL property show whether retirement pension income can cover the remaining gross mortgage payment.
+- Scenarios without NL property show whether retirement pension income can cover inflation-adjusted rent.
