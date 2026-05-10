@@ -464,20 +464,14 @@ function maxLoanFromAnnualPayment(annualPayment, annualRate, months) {
   return payment * (1 - Math.pow(1 + monthlyRate, -nMonths)) / monthlyRate;
 }
 
-function calculateMaxNlMortgageForYear(model, purchaseYear, propertyPrice) {
+
+function calculateNlIncomeBasedMortgageCapacityForYear(model, purchaseYear) {
   const income = annualSalaryBonusIncome(model, purchaseYear);
   const financingLoadPct = activeNlFinancingLoadPct(model, purchaseYear);
   const annualCapacityBeforeObligations = income * financingLoadPct;
   const annualCapacity = Math.max(0, annualCapacityBeforeObligations - (model.nlOtherAnnualObligations || 0));
   const testRate = nlMortgageTestRate(model);
   const incomeBasedMax = maxLoanFromAnnualPayment(annualCapacity, testRate, model.amsMonths);
-
-  /*
-    LTV cap: standard Dutch mortgage cannot exceed 100% of property value
-    before special energy-saving exceptions. Purchase costs are not financed here.
-  */
-  const ltvMax = Math.max(0, propertyPrice || 0);
-  const maxMortgage = Math.min(incomeBasedMax, ltvMax);
 
   return {
     income,
@@ -486,6 +480,32 @@ function calculateMaxNlMortgageForYear(model, purchaseYear, propertyPrice) {
     annualCapacity,
     testRate,
     incomeBasedMax,
+  };
+}
+
+function calculateNlAcquisitionCapacityForYear(model, purchaseYear) {
+  /*
+    For scenario acquisition, there is no fixed pre-appreciating purchase target.
+    The property bought is whatever can be financed in that year. Therefore
+    acquisition price = mortgage amount = income-based borrowing capacity.
+  */
+  const capacity = calculateNlIncomeBasedMortgageCapacityForYear(model, purchaseYear);
+  return {
+    ...capacity,
+    ltvMax: capacity.incomeBasedMax,
+    maxMortgage: capacity.incomeBasedMax,
+    acquisitionPrice: capacity.incomeBasedMax,
+    externalDownpaymentRequired: 0,
+  };
+}
+
+function calculateMaxNlMortgageForYear(model, purchaseYear, propertyPrice) {
+  const capacity = calculateNlIncomeBasedMortgageCapacityForYear(model, purchaseYear);
+  const ltvMax = Math.max(0, propertyPrice || 0);
+  const maxMortgage = Math.min(capacity.incomeBasedMax, ltvMax);
+
+  return {
+    ...capacity,
     ltvMax,
     maxMortgage,
     externalDownpaymentRequired: Math.max(0, (propertyPrice || 0) - maxMortgage),
@@ -864,6 +884,13 @@ function box3Tax(model, dutchInvestments, box3Debt, foreignRealEstateValue, sold
 }
 
 
+
+function recordExternalNlFundingNeed(state, amount, label = "NL property external funding need") {
+  if (amount <= 0) return;
+  state.externalNlFundingNeed = (state.externalNlFundingNeed || 0) + amount;
+  state.events.push(`${label} ${fmtEUR2.format(amount)}`);
+}
+
 function recordHousingCashflowShortfall(state, amount, label = "monthly housing cashflow") {
   if (amount <= 0) return;
 
@@ -1067,7 +1094,7 @@ function simulateScenario(model, key) {
     }
   }
 
-  const state = { etf: model.etfStartingValue, cashReserve: Math.max(0, (model.externalCashReserve || 0) + (model.scenarios?.A?.extraCash || 0)), shortfall: 0, events: [] };
+  const state = { etf: model.etfStartingValue, cashReserve: Math.max(0, (model.externalCashReserve || 0) + (model.scenarios?.A?.extraCash || 0)), shortfall: 0, externalNlFundingNeed: 0, events: [] };
   let ltSold = false;
   let ltRepaid = false;
   let nlOwned = false;
@@ -1119,19 +1146,20 @@ function simulateScenario(model, key) {
 
     if ((key === "A" || key === "B") && year === sc.purchaseYear && !nlOwned) {
       nlOwned = true;
-      nlPurchasePriceUsed = nlPurchasePriceForYear(model, year);
+      const nlMortgageCapacity = calculateNlAcquisitionCapacityForYear(model, year);
+      nlPurchasePriceUsed = nlMortgageCapacity.acquisitionPrice;
 
       /*
-        NL property price is scenario-year specific. The mortgage is capped by the
-        estimated Dutch income/LTV maximum. Any gap is external liquidity/downpayment.
-        ETF is not liquidated for the purchase.
+        Acquisition is capacity-based:
+        purchase price = max mortgage amount = calculated borrowing capacity.
+        There is no pre-purchase appreciation of a fixed target property price.
+        Purchase costs remain external.
       */
-      const nlMortgageCapacity = calculateMaxNlMortgageForYear(model, year, nlPurchasePriceUsed);
       nlLoan = nlMortgageCapacity.maxMortgage;
       nlSchedule = buildAmsSchedule(model, year, nlLoan);
 
-      recordHousingCashflowShortfall(state, Math.max(0, model.amsCosts || 0) + nlMortgageCapacity.externalDownpaymentRequired, "NL property external liquidity need");
-      state.events.push(`NL property purchased externally at ${fmtEUR2.format(nlPurchasePriceUsed)}; max mortgage ${fmtEUR2.format(nlLoan)}; external need ${fmtEUR2.format(nlMortgageCapacity.externalDownpaymentRequired)}`);
+      recordExternalNlFundingNeed(state, Math.max(0, model.amsCosts || 0), "NL property purchase costs");
+      state.events.push(`NL property acquired by borrowing capacity at ${fmtEUR2.format(nlPurchasePriceUsed)}; mortgage ${fmtEUR2.format(nlLoan)}`);
     }
 
     let contributions = 0;
@@ -1193,8 +1221,9 @@ function simulateScenario(model, key) {
       ltDebt,
       ltEquity,
       nlPurchasePriceUsed,
-      nlMaxMortgageAmount: nlOwned ? calculateMaxNlMortgageForYear(model, sc.purchaseYear || year, nlPurchasePriceUsed).maxMortgage : 0,
-      nlExternalDownpaymentRequired: nlOwned ? calculateMaxNlMortgageForYear(model, sc.purchaseYear || year, nlPurchasePriceUsed).externalDownpaymentRequired : 0,
+      nlMaxMortgageAmount: nlOwned ? calculateNlAcquisitionCapacityForYear(model, sc.purchaseYear || year).maxMortgage : 0,
+      nlExternalDownpaymentRequired: nlOwned ? Math.max(0, nlPurchasePriceForYear(model, sc.purchaseYear || year) - calculateNlAcquisitionCapacityForYear(model, sc.purchaseYear || year).maxMortgage) : 0,
+      nlExternalFundingNeed: state.externalNlFundingNeed || 0,
       amsValue: nlValue,
       amsDebt: nlDebt,
       amsEquity: nlEquity,
@@ -1242,6 +1271,7 @@ function simulateScenario(model, key) {
     totalTreatyRelief,
     totalSecondPropertyTax,
     liquidityShortfall: state.shortfall,
+    externalNlFundingNeed: state.externalNlFundingNeed || 0,
     feasible: state.shortfall <= 0 || conditionallyFeasible,
     conditionallyFeasible,
     comment,
@@ -1370,13 +1400,14 @@ function renderSummary(result) {
       formatCurrency(s.totalTreatyRelief || 0),
       formatCurrency(s.totalSecondPropertyTax || 0),
       formatCurrency(s.liquidityShortfall),
+      formatCurrency(s.externalNlFundingNeed || 0),
       s.comment,
     ];
 
     values.forEach((v, i) => {
       const td = tr.insertCell();
       td.textContent = v;
-      if (i === 0 || i === 11) td.style.textAlign = "left";
+      if (i === 0 || i === 12) td.style.textAlign = "left";
     });
   });
 
@@ -1407,6 +1438,7 @@ function renderDetails(result) {
       fmtEUR.format(r.nlPurchasePriceUsed || 0),
       fmtEUR.format(r.nlMaxMortgageAmount || 0),
       fmtEUR.format(r.nlExternalDownpaymentRequired || 0),
+      fmtEUR.format(r.nlExternalFundingNeed || 0),
       fmtEUR.format(r.amsValue),
       fmtEUR.format(r.amsDebt),
       fmtEUR.format(r.amsEquity),
@@ -1428,7 +1460,7 @@ function renderDetails(result) {
     values.forEach((v, i) => {
       const td = tr.insertCell();
       td.textContent = v;
-      if (i === 0 || i === 23) td.style.textAlign = "left";
+      if (i === 0 || i === 24) td.style.textAlign = "left";
     });
   });
 }
@@ -2032,17 +2064,17 @@ function calculate() {
     console.error(error);
     const tbody = document.querySelector("#summaryTable tbody");
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="12" style="text-align:left;color:#b42318">Calculation error: ${error.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="13" style="text-align:left;color:#b42318">Calculation error: ${error.message}</td></tr>`;
     }
   }
 }
 
 function downloadCsv() {
   const result = window.__lastResult || simulateAll();
-  const rows = [["Scenario", "Year", "ETF", "2nd property value", "2nd mortgage debt", "2nd property equity", "NL purchase price used", "NL max mortgage amount", "NL external downpayment required", "NL property value", "NL mortgage debt", "NL property equity", "NL gross mortgage/month", "NL tax benefit/month", "NL net mortgage/month", "Total net worth", "Real net worth", "Box 3 tax", "Box 3 treaty relief", "Box 3 foreign real estate value", "Box 3 exempt debt allocation", "Box 3 Dutch debt allocation", "2nd property taxable value", "2nd property tax", "Events"]];
+  const rows = [["Scenario", "Year", "ETF", "2nd property value", "2nd mortgage debt", "2nd property equity", "NL acquisition price used", "NL max mortgage amount", "NL capacity gap vs reference price", "NL external purchase costs", "NL property value", "NL mortgage debt", "NL property equity", "NL gross mortgage/month", "NL tax benefit/month", "NL net mortgage/month", "Total net worth", "Real net worth", "Box 3 tax", "Box 3 treaty relief", "Box 3 foreign real estate value", "Box 3 exempt debt allocation", "Box 3 Dutch debt allocation", "2nd property taxable value", "2nd property tax", "Events"]];
   Object.values(result.scenarios).forEach(s => s.rows.forEach(r => rows.push([
     s.label, r.year, r.etf.toFixed(2), r.ltMarketValue.toFixed(2), r.ltDebt.toFixed(2), r.ltEquity.toFixed(2),
-    (r.nlPurchasePriceUsed || 0).toFixed(2), (r.nlMaxMortgageAmount || 0).toFixed(2), (r.nlExternalDownpaymentRequired || 0).toFixed(2), r.amsValue.toFixed(2), r.amsDebt.toFixed(2), r.amsEquity.toFixed(2), (r.nlGrossMortgageMonthly || 0).toFixed(2), (r.nlMortgageTaxBenefitMonthly || 0).toFixed(2), (r.nlNetMortgageMonthly || 0).toFixed(2), r.totalNetWorth.toFixed(2), r.realNetWorth.toFixed(2), r.box3Tax.toFixed(2), (r.box3TreatyRelief || 0).toFixed(2), (r.box3ForeignRealEstate || 0).toFixed(2), (r.box3ExemptDebtAllocation || 0).toFixed(2), (r.box3DutchDebtAllocation || 0).toFixed(2), (r.secondPropertyTaxableValue || 0).toFixed(2), (r.secondPropertyTax || 0).toFixed(2), r.events
+    (r.nlPurchasePriceUsed || 0).toFixed(2), (r.nlMaxMortgageAmount || 0).toFixed(2), (r.nlExternalDownpaymentRequired || 0).toFixed(2), (r.nlExternalFundingNeed || 0).toFixed(2), r.amsValue.toFixed(2), r.amsDebt.toFixed(2), r.amsEquity.toFixed(2), (r.nlGrossMortgageMonthly || 0).toFixed(2), (r.nlMortgageTaxBenefitMonthly || 0).toFixed(2), (r.nlNetMortgageMonthly || 0).toFixed(2), r.totalNetWorth.toFixed(2), r.realNetWorth.toFixed(2), r.box3Tax.toFixed(2), (r.box3TreatyRelief || 0).toFixed(2), (r.box3ForeignRealEstate || 0).toFixed(2), (r.box3ExemptDebtAllocation || 0).toFixed(2), (r.box3DutchDebtAllocation || 0).toFixed(2), (r.secondPropertyTaxableValue || 0).toFixed(2), (r.secondPropertyTax || 0).toFixed(2), r.events
   ])));
   const csv = rows.map(row => row.map(x => `"${String(x).replaceAll('"', '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });

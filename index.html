@@ -111,15 +111,15 @@
 
 <h3>NL property & mortgage</h3>
 <div class="grid">
-<label>NL property purchase price today (EUR) <input id="amsPrice" type="number" value="650000"/></label>
-<label>NL mortgage amount (auto = scenario purchase price; purchase funded externally) <input id="amsLoan" type="number" value="650000"/></label>
+<label>Reference NL property price today (EUR) <input id="amsPrice" type="number" value="650000"/></label>
+<label>NL mortgage / purchase amount (auto = max borrowing capacity) <input id="amsLoan" type="number" value="650000"/></label>
 <label>NL mortgage rate (%) <input id="amsRate" type="number" value="4.06" step="0.01"/></label>
 <label>NL mortgage term months <input id="amsMonths" type="number" value="360"/></label>
 <label>Calculated gross mortgage payment/month (EUR) <input id="amsGrossMortgagePaymentPreview" type="number" readonly/></label>
 <label>Calculated net mortgage payment/month (EUR) <input id="amsNetMortgagePaymentPreview" type="number" readonly/></label>
 <label>Mortgage interest tax benefit/month (EUR) <input id="amsMortgageTaxBenefitPreview" type="number" readonly/></label>
 <label>NL property annual appreciation (%) <input id="amsAppreciation" type="number" value="5.0" step="0.1"/></label>
-<p class="note">Future NL purchase price = today’s purchase price × NL property appreciation growth until the scenario purchase year. Personal inflation is not compounded into the property price. NL mortgage amount is capped by the calculated Dutch maximum mortgage amount for that purchase year. NL property purchases are funded with external liquidity; ETF contributions are not liquidated for the purchase.</p>
+<p class="note">For scenarios A/B, the actual NL acquisition price is no longer a fixed target price grown before purchase. The calculator estimates maximum Dutch borrowing capacity in the acquisition year and uses that amount as both the NL purchase price and the NL mortgage amount. The reference price is kept only for comparison / preview.</p>
 <label>Purchase costs (EUR) <input id="amsCosts" type="number" value="25000"/></label>
 <label>Monthly ownership costs (EUR) <input id="ownershipCosts" type="number" value="0"/></label>
 <label>Rent avoided (EUR / month) <input id="rentAvoided" type="number" value="2300"/></label>
@@ -254,7 +254,7 @@
 <div><span>Most liquid final ETF</span><strong id="bestLiquidity">-</strong></div>
 </div>
 <div class="table-wrap result-wrap"><table id="summaryTable">
-<thead><tr><th>Scenario</th><th>Feasible?</th><th>Final ETF</th><th>2nd property equity</th><th>NL property equity</th><th>Total net worth</th><th>Inflation-adjusted net worth</th><th>Total Box 3 tax</th><th>Total treaty relief</th><th>Total 2nd property tax</th><th>Liquidity shortfall</th><th>Comment</th></tr></thead><tbody></tbody>
+<thead><tr><th>Scenario</th><th>Feasible?</th><th>Final ETF</th><th>2nd property equity</th><th>NL property equity</th><th>Total net worth</th><th>Inflation-adjusted net worth</th><th>Total Box 3 tax</th><th>Total treaty relief</th><th>Total 2nd property tax</th><th>Liquidity shortfall</th><th>External NL funding need</th><th>Comment</th></tr></thead><tbody></tbody>
 </table></div>
 
 <div id="storedComparisonBlock" class="stored-comparison hidden">
@@ -307,7 +307,7 @@
 <button class="detail-tab-button" data-detail="D" type="button">Scenario D</button>
 </div>
 <div class="table-wrap result-wrap"><table id="detailsTable">
-<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL purchase price used</th><th>NL max mortgage amount</th><th>NL external downpayment required</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>NL gross mortgage/month</th><th>NL tax benefit/month</th><th>NL net mortgage/month</th><th>Box 1 tax before own-home deduction</th><th>Box 1 tax after own-home deduction</th><th>NL property tax deduction/year</th><th>Eigenwoningforfait</th><th>Gross salary + bonus</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Box 3 treaty relief</th><th>Box 3 foreign real estate value</th><th>Box 3 exempt debt allocation</th><th>Box 3 Dutch debt allocation</th><th>2nd property taxable value</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
+<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL acquisition price used</th><th>NL max mortgage amount</th><th>NL capacity gap vs reference price</th><th>NL external purchase costs</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>NL gross mortgage/month</th><th>NL tax benefit/month</th><th>NL net mortgage/month</th><th>Box 1 tax before own-home deduction</th><th>Box 1 tax after own-home deduction</th><th>NL property tax deduction/year</th><th>Eigenwoningforfait</th><th>Gross salary + bonus</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Box 3 treaty relief</th><th>Box 3 foreign real estate value</th><th>Box 3 exempt debt allocation</th><th>Box 3 Dutch debt allocation</th><th>2nd property taxable value</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
 </table></div>
 </section>
 

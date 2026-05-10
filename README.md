@@ -540,3 +540,29 @@ NL maximum mortgage:
   - capped at 100% of property value
 - Scenarios A/B now use scenario-year property price and calculated max mortgage.
 - Any gap between purchase price and max mortgage is tracked as external downpayment / liquidity need.
+
+
+## v41 fix: external NL funding is not liquidity shortfall
+
+Fixed feasibility classification for scenarios A/B with NL property:
+- The gap between future NL property price and calculated max mortgage is now tracked as **External NL funding need**.
+- Purchase costs are also tracked as external NL funding need.
+- These amounts no longer create scenario liquidity shortfall.
+- Liquidity shortfall now represents operational cashflow/affordability deficits, not externally-funded property acquisition capital.
+
+This matches the scenario assumption:
+- NL property purchase is funded with external liquidity.
+- The model uses max mortgage for the mortgage schedule.
+- ETF is not liquidated for the NL purchase.
+
+
+## v42 change: NL acquisition price is borrowing-capacity based
+
+Changed the NL purchase model again:
+- There is no fixed target property price that appreciates before acquisition.
+- For Scenario A/B, acquisition year determines borrowing capacity.
+- NL acquisition price = calculated max mortgage amount for that year.
+- NL mortgage amount = NL acquisition price.
+- The old reference NL property price remains only as a comparison / preview value.
+- The previous "external downpayment required" is now shown as a capacity gap versus the reference target price, not as a required external funding source.
+- External NL funding now mainly means purchase costs.
