@@ -383,54 +383,16 @@ Added:
 - Scenario comparison table in the pension section
 
 
-## v28 changes: collapsible left navigation
+## v32 changes: return to v27 base without navigation
 
-Added a pinned, collapsible left navigation panel:
-- click the navigation button to expand/collapse
-- contains links to key sections and subsections
-- clicking a link smoothly scrolls to that section
-- active section is highlighted while scrolling
-- collapsed/expanded state is stored in browser localStorage
-- on small screens the panel moves to the bottom-left
-
-
-## v29 changes: layout nav, defaults, pension base, extended schedules
-
-Changed:
-- Left navigation no longer overlays content when expanded.
-  - The page layout shifts to leave room for the open nav panel.
-  - On small screens the bottom-left nav still uses bottom padding.
-- Defaults:
-  - Retirement year = 2054
-  - Fiscal partner for Box 3 = yes
-  - 2nd property official taxable / mass valuation value = EUR 152,000
-- Pension section:
-  - AOW + employer pension toggle is used consistently across all pension scenario comparisons.
-  - Pension base year is now derived from retirement year:
-    - base year = retirement year - 1
-    - pension start year = retirement year
-- Box 1 / EWF schedules:
-  - default rows are extended through the possible NL mortgage horizon.
-  - unknown future tax rates/brackets/caps are held constant at last-known defaults.
-
-
-## v30 fix: runtime and layout repair
-
-Fixed:
-- Pension/disposable-income runtime crash caused by using `model` before declaration.
-- This crash prevented all calculators from rendering.
-- Reworked v29 navigation layout override so the open nav takes page space without applying global body padding that broke the grid.
-- Light/dark toggle remains independent of navigation state.
-
-
-## v31 fix: navigation layout rebuilt
-
-The v29/v30 navigation used fixed positioning and body-padding overrides, which could still break grid/layout behavior in browsers.
-
-v31 rebuilds it:
-- wraps navigation + content in `.app-shell`
-- desktop navigation is `position: sticky` inside flex layout, not overlayed
-- content naturally gets remaining width
-- no global body padding hacks
-- mobile navigation remains fixed bottom-left
-- fixed pension runtime ordering again
+Reverted to the v27 no-navigation layout and applied only the requested small tweaks:
+- Retirement year default = 2054
+- Fiscal partner for Box 3 default = yes
+- 2nd property official taxable / mass valuation value default = EUR 152,000
+- Pension base year is derived from retirement year:
+  - base year = retirement year - 1
+  - pension start year = retirement year
+- EUR 22,584 / EUR 34,320 pension toggle is used across all pension scenario comparisons
+- Box 1 / mortgage deduction and EWF schedules are extended through the possible NL mortgage horizon
+- Unknown future tax rates/brackets/caps are held constant at the last known values
+- No left navigation panel

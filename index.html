@@ -7,35 +7,6 @@
   <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-
-<div class="app-shell">
-<aside id="sideNav" class="side-nav collapsed" aria-label="Page navigation">
-  <button id="sideNavToggle" class="side-nav-toggle" type="button" aria-expanded="false" aria-controls="sideNavLinks">
-    <span class="side-nav-toggle-icon">☰</span>
-    <span class="side-nav-toggle-text">Navigation</span>
-  </button>
-  <nav id="sideNavLinks" class="side-nav-links">
-    <a href="#section-common">Common variables</a>
-    <a href="#section-timeline" class="sub">Timeline & ETF</a>
-    <a href="#section-box3" class="sub">Dutch Box 3</a>
-    <a href="#section-box3-allocation" class="sub">Box 3 allocation</a>
-    <a href="#section-second-property" class="sub">2nd property</a>
-    <a href="#section-second-tax" class="sub">2nd property tax</a>
-    <a href="#section-nl-property" class="sub">NL property</a>
-    <a href="#section-nl-deduction" class="sub">NL mortgage deduction</a>
-    <a href="#section-salary" class="sub">Salary + bonus</a>
-    <a href="#section-euribor" class="sub">Euribor6M</a>
-    <a href="#section-etf-contrib" class="sub">ETF contributions</a>
-    <a href="#section-lump" class="sub">Lump sums</a>
-    <a href="#section-scenarios">Scenarios</a>
-    <a href="#section-performance">Performance & analysis</a>
-    <a href="#section-chart" class="sub">Chart</a>
-    <a href="#section-inflation">Inflation calculator</a>
-    <a href="#section-details">Yearly details</a>
-    <a href="#section-pension">Future pension income</a>
-    <a href="#section-disposable-ranking" class="sub">Disposable ranking</a>
-  </nav>
-</aside>
 <main class="container">
 <header class="top-header">
   <div>
@@ -50,10 +21,10 @@
   </label>
 </header>
 
-<section class="card" id="section-common">
+<section class="card">
 <h2>Common variables</h2>
 
-<h3 id="section-timeline">Timeline & ETF</h3>
+<h3>Timeline & ETF</h3>
 <div class="grid">
 <label>Projection start year <input id="projectionStartYear" type="number" value="2025"/></label>
 <label>Retirement year <input id="retirementYear" type="number" value="2054"/></label>
@@ -64,7 +35,7 @@
 <label>Personal inflation / spending inflation (%) <input id="personalInflation" type="number" value="3.3" step="0.1"/></label>
 </div>
 
-<h3 id="section-box3">Dutch Box 3 assumptions</h3>
+<h3>Dutch Box 3 assumptions</h3>
 <div class="grid">
 <label class="field-label">Fiscal partner for Box 3?
   <span class="switch-control inline-switch">
@@ -94,11 +65,11 @@
 <p class="note">Fiscal partner uses 2025 joint Box 3 allowance (EUR 115,368) and joint debt threshold (EUR 7,600), allocated fully to your side.</p>
 
 
-<h3 id="section-box3-allocation">Box 3 debt allocation model</h3>
+<h3>Box 3 debt allocation model</h3>
 <p class="note">
   Box 3 debt allocation is now calculated inside every scenario year. The calculator uses that year's forecasted ETF value as Dutch investments, the forecasted 2nd-property position as foreign treaty-exempt real estate, and the remaining 2nd mortgage as Box 3 debt. See the yearly details table for exempt debt allocation, Dutch debt allocation, treaty relief, and final Box 3 tax.
 </p>
-<h3 id="section-second-property">2nd property abroad & mortgage</h3>
+<h3>2nd property abroad & mortgage</h3>
 <div class="grid">
 <label>2nd purchase / tax value (EUR) <input id="ltPropertyValue" type="number" value="204000"/></label>
 <label>2nd initial equity (EUR) <input id="ltDownpayment" type="number" value="59250"/></label>
@@ -113,7 +84,7 @@
 </div>
 
 
-<h3 id="section-second-tax">2nd property local real estate tax</h3>
+<h3>2nd property local real estate tax</h3>
 <div class="grid">
 <label>Official taxable / mass valuation value (€)
   <input id="secondPropertyTaxableValue" type="number" value="152000" min="0" step="1000"/>
@@ -137,7 +108,7 @@
 <div class="section-head"><p class="note">Bracket lower/upper limits are in EUR. Leave upper limit empty for no cap.</p><button id="addSecondPropertyTaxBracket" type="button">Add tax bracket</button></div>
 <div class="table-wrap"><table id="secondPropertyTaxTable"><thead><tr><th>Lower limit (€)</th><th>Upper limit (€)</th><th>Rate (%)</th><th></th></tr></thead><tbody></tbody></table></div>
 
-<h3 id="section-nl-property">NL property & mortgage</h3>
+<h3>NL property & mortgage</h3>
 <div class="grid">
 <label>NL property purchase price (EUR) <input id="amsPrice" type="number" value="650000"/></label>
 <label>NL mortgage amount (EUR, 0 downpayment default) <input id="amsLoan" type="number" value="650000"/></label>
@@ -152,39 +123,39 @@
 <label>Rent avoided (EUR / month) <input id="rentAvoided" type="number" value="2300"/></label>
 </div>
 
-<h3 id="section-nl-deduction">NL mortgage interest deduction</h3>
+<h3>NL mortgage interest deduction</h3>
 <p class="note">
   Fluctuating Dutch own-home deduction assumptions are entered as yearly schedules. The active row is the latest row with year ≤ calculation year.
 </p>
 
-<h4 id="section-box1-schedule">Box 1 tax / mortgage deduction schedule</h4>
+<h4>Box 1 tax / mortgage deduction schedule</h4>
 <div class="section-head"><p class="note">Rates are decimal percentages. Deduction cap limits mortgage-interest deduction in the top bracket.</p><button id="addNlBox1RateRow" type="button">Add Box 1 rate row</button></div>
 <div class="table-wrap"><table id="nlBox1RateTable"><thead><tr><th>Year</th><th>Bracket 1 up to (EUR)</th><th>Rate 1 (%)</th><th>Bracket 2 up to (EUR)</th><th>Rate 2 (%)</th><th>Top rate (%)</th><th>Deduction cap (%)</th><th></th></tr></thead><tbody></tbody></table></div>
 
-<h4 id="section-ewf-schedule">Eigenwoningforfait / WOZ schedule</h4>
+<h4>Eigenwoningforfait / WOZ schedule</h4>
 <div class="section-head"><p class="note">WOZ value is used for eigenwoningforfait. Add future rows if thresholds, rates, or WOZ values change.</p><button id="addNlEwfRow" type="button">Add EWF row</button></div>
 <div class="table-wrap"><table id="nlEwfTable"><thead><tr><th>Year</th><th>WOZ value (EUR)</th><th>Normal rate (%)</th><th>High-value threshold (EUR)</th><th>High-value rate (%)</th><th></th></tr></thead><tbody></tbody></table></div>
 
 <p id="nlMortgageTaxWarning" class="note warning"></p>
 
-<h3 id="section-salary">Gross salary + bonus for mortgage deduction</h3>
+<h3>Gross salary + bonus for mortgage deduction</h3>
 <div class="section-head"><p class="note">Used to estimate Box 1 tax benefit from mortgage interest deduction. Add salary and bonus rows over time.</p><button id="addSalaryBonusRow" type="button">Add income row</button></div>
 <div class="table-wrap"><table id="salaryBonusTable"><thead><tr><th>Amount (EUR)</th><th>Frequency</th><th>Month</th><th>Start year</th><th>End year</th><th>Description</th><th></th></tr></thead><tbody></tbody></table></div>
 
-<h3 id="section-euribor">Euribor6M schedule</h3>
+<h3>Euribor6M schedule</h3>
 <div class="section-head"><p class="note">Used for the 2nd-property-abroad mortgage forecast.</p><button id="addRateRow" type="button">Add rate row</button></div>
 <div class="table-wrap"><table id="rateTable"><thead><tr><th>Effective from</th><th>Euribor6M (%)</th><th></th></tr></thead><tbody></tbody></table></div>
 
-<h3 id="section-etf-contrib">ETF recurring contributions</h3>
+<h3>ETF recurring contributions</h3>
 <div class="section-head"><p class="note">Recurring ETF contributions shared by scenarios.</p><button id="addEtfContribution" type="button">Add contribution</button></div>
 <div class="table-wrap"><table id="etfContributionTable"><thead><tr><th>Amount (EUR)</th><th>Frequency</th><th>Month</th><th>Start year</th><th>End year</th><th></th></tr></thead><tbody></tbody></table></div>
 
-<h3 id="section-lump">Lump sum contributions</h3>
+<h3>Lump sum contributions</h3>
 <div class="section-head"><p class="note">One-off contributions. Choose ETF or 2nd mortgage repayment as destination.</p><button id="addLumpContribution" type="button">Add lump sum</button></div>
 <div class="table-wrap"><table id="lumpContributionTable"><thead><tr><th>Amount (EUR)</th><th>Year</th><th>Month</th><th>Destination</th><th>Description</th><th></th></tr></thead><tbody></tbody></table></div>
 </section>
 
-<section class="card" id="section-scenarios">
+<section class="card">
 <h2>Scenario-specific assumptions</h2>
 <div class="tabs">
 <button class="tab-button active" data-tab="scenarioA" type="button">A. Repay 2nd mortgage + buy NL property</button>
@@ -235,7 +206,7 @@
 </div>
 </section>
 
-<section class="card" id="section-performance">
+<section class="card">
 <div class="section-head performance-head">
   <h2>Overall performance & analysis</h2>
   <div class="head-actions">
@@ -277,12 +248,12 @@
   </div>
 </div>
 
-<h3 id="section-chart">Scenario chart: total net worth</h3>
+<h3>Scenario chart: total net worth</h3>
 <div class="chart-toolbar"><div id="chartControls" class="chart-controls"></div><div class="chart-zoom-controls"><button id="chartZoomOut" type="button" class="secondary">−</button><button id="chartZoomReset" type="button" class="secondary">Reset zoom</button><button id="chartZoomIn" type="button" class="secondary">+</button></div></div>
 <div class="chart-wrap"><svg id="chart"></svg><div id="chartTooltip" class="chart-tooltip hidden"></div></div>
 </section>
 
-<section class="card" id="section-inflation">
+<section class="card">
 <h2>Inflation calculator</h2>
 <p class="note">Uses historical eurozone annual inflation for past periods and personal inflation for future years. Amount is converted from start-year money to target-year money.</p>
 <div class="grid">
@@ -298,7 +269,7 @@
 </div>
 </section>
 
-<section class="card" id="section-details">
+<section class="card">
 <h2>Yearly details</h2>
 <div class="tabs detail-tabs">
 <button class="detail-tab-button active" data-detail="A" type="button">Scenario A</button>
@@ -311,7 +282,7 @@
 </table></div>
 </section>
 
-<section class="card" id="section-pension">
+<section class="card">
 <h2>Future pension income</h2>
 <p class="note">
   Uses each selected scenario's ETF value at the end of the year before retirement starts as the retirement investment base.
@@ -371,7 +342,7 @@
 
 <p id="pensionNote" class="note"></p>
 
-<h3 id="section-disposable-ranking">Retirement disposable income ranking</h3>
+<h3>Retirement disposable income ranking</h3>
 <p class="note">
   For scenarios with NL property, disposable income subtracts gross NL mortgage payment. For scenarios without NL property, it subtracts future rent grown from Rent avoided using rent inflation.
 </p>
@@ -398,7 +369,6 @@
 </section>
 
 </main>
-</div>
 <script src="app.js"></script>
 </body>
 </html>

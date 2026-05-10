@@ -1886,66 +1886,11 @@ function setupTabs() {
 }
 
 
-function setupSideNavigation() {
-  const nav = document.getElementById("sideNav");
-  const toggle = document.getElementById("sideNavToggle");
-  const links = Array.from(document.querySelectorAll("#sideNavLinks a"));
-  if (!nav || !toggle || !links.length) return;
-
-  const setExpanded = expanded => {
-    nav.classList.toggle("collapsed", !expanded);
-    toggle.setAttribute("aria-expanded", String(expanded));
-    try { localStorage.setItem("calculatorSideNavExpanded", expanded ? "yes" : "no"); } catch (_) {}
-  };
-
-  let stored = "no";
-  try { stored = localStorage.getItem("calculatorSideNavExpanded") || "no"; } catch (_) {}
-  setExpanded(stored === "yes");
-
-  toggle.addEventListener("click", () => {
-    setExpanded(nav.classList.contains("collapsed"));
-  });
-
-  links.forEach(link => {
-    link.addEventListener("click", event => {
-      const target = document.querySelector(link.getAttribute("href"));
-      if (!target) return;
-      event.preventDefault();
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-      history.replaceState(null, "", link.getAttribute("href"));
-      if (window.matchMedia("(max-width: 900px)").matches) setExpanded(false);
-    });
-  });
-
-  const observed = links
-    .map(link => document.querySelector(link.getAttribute("href")))
-    .filter(Boolean);
-
-  if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver(entries => {
-      const visible = entries
-        .filter(entry => entry.isIntersecting)
-        .sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top))[0];
-
-      if (!visible) return;
-
-      links.forEach(link => {
-        link.classList.toggle("active", link.getAttribute("href") === `#${visible.target.id}`);
-      });
-    }, { rootMargin: "-20% 0px -70% 0px", threshold: [0, 0.1, 0.25] });
-
-    observed.forEach(section => observer.observe(section));
-  }
-}
-
-
-
 function addNlMortgageDeductionScheduleDefaults() {
   const startYear = Math.round(inputNumber("projectionStartYear") || 2025);
-  const purchaseStartYear = Math.min(
-    Math.round(inputNumber("aEarliestPurchaseYear") || startYear),
-    Math.round(inputNumber("bPurchaseYear") || startYear)
-  );
+  const earliestA = Math.round(inputNumber("aEarliestPurchaseYear") || startYear);
+  const purchaseB = Math.round(inputNumber("bPurchaseYear") || startYear);
+  const purchaseStartYear = Math.min(earliestA, purchaseB);
   const termYears = Math.ceil((inputNumber("amsMonths") || 360) / 12);
   const endYear = Math.max(2054, purchaseStartYear + termYears);
   addNlMortgageDeductionScheduleDefaults();
