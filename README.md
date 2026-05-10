@@ -392,3 +392,23 @@ Added a pinned, collapsible left navigation panel:
 - active section is highlighted while scrolling
 - collapsed/expanded state is stored in browser localStorage
 - on small screens the panel moves to the bottom-left
+
+
+## v29 changes: layout nav, defaults, pension base, extended schedules
+
+Changed:
+- Left navigation no longer overlays content when expanded.
+  - The page layout shifts to leave room for the open nav panel.
+  - On small screens the bottom-left nav still uses bottom padding.
+- Defaults:
+  - Retirement year = 2054
+  - Fiscal partner for Box 3 = yes
+  - 2nd property official taxable / mass valuation value = EUR 152,000
+- Pension section:
+  - AOW + employer pension toggle is used consistently across all pension scenario comparisons.
+  - Pension base year is now derived from retirement year:
+    - base year = retirement year - 1
+    - pension start year = retirement year
+- Box 1 / EWF schedules:
+  - default rows are extended through the possible NL mortgage horizon.
+  - unknown future tax rates/brackets/caps are held constant at last-known defaults.

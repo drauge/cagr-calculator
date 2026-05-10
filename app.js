@@ -1424,9 +1424,20 @@ function getYearRow(scenarioResult, year) {
   return scenarioResult.rows.find(r => Number(r.year) === Number(year)) || scenarioResult.rows.at(-1) || null;
 }
 
+
+function pensionBaseYear(model) {
+  return Math.max(model.projectionStartYear, (model.retirementYear || model.projectionEndYear || 2054) - 1);
+}
+
+function pensionStartYear(model) {
+  return Math.max(model.projectionStartYear + 1, model.retirementYear || 2054);
+}
+
 function getPensionScenarioMetrics(result, scenarioKey) {
   const scenario = result?.scenarios?.[scenarioKey];
-  const row2053 = getYearRow(scenario, 2053);
+  const baseYear = pensionBaseYear(model);
+  const startYear = pensionStartYear(model);
+  const row2053 = getYearRow(scenario, baseYear);
   const model = result?.model || readModel();
 
   const basePensionAnnual = document.getElementById("pensionHigherBase")?.checked ? 34320 : 22584;
@@ -1444,9 +1455,9 @@ function getPensionScenarioMetrics(result, scenarioKey) {
   } else if (scenarioKey === (document.getElementById("pensionScenario")?.value || "A") && sellToggle?.checked && !alreadySold) {
     ltSaleProceeds = Math.max(0, (row2053.ltMarketValue || 0) - (row2053.ltDebt || 0));
     etfBase += ltSaleProceeds;
-    note = `${scenarioKey}: remaining 2nd property is sold at EOY 2053 and equity is added to ETF.`;
+    note = `${scenarioKey}: remaining 2nd property is sold at retirement base year EOY and equity is added to ETF.`;
   } else if (alreadySold) {
-    note = `${scenarioKey}: 2nd property is already sold before / by 2053.`;
+    note = `${scenarioKey}: 2nd property is already sold before / by retirement base year.`;
   } else {
     note = `${scenarioKey}: 2nd property is retained for pension calculation.`;
   }
@@ -1459,14 +1470,14 @@ function getPensionScenarioMetrics(result, scenarioKey) {
 
   const inflationStartYear = Math.round(inputNumber("inflationStartYear")) || model.projectionStartYear;
   const inflationFutureRate = inputPct("inflationFutureRate") || model.personalInflation || 0.033;
-  const inflationFactor = calculateInflationFactor(inflationStartYear, 2054, inflationFutureRate);
+  const inflationFactor = calculateInflationFactor(inflationStartYear, startYear, inflationFutureRate);
   const monthlyToday = monthlyFuture / inflationFactor;
 
   const ownsNlProperty = (row2053?.amsValue || 0) > 0;
   const grossNlMortgageMonthly = ownsNlProperty ? (row2053?.nlGrossMortgageMonthly || 0) : 0;
 
   const rentInflation = Math.max(0, (model.personalInflation || 0) - inputPct("rentInflationDiscount"));
-  const rentFactor = Math.pow(1 + rentInflation, Math.max(0, 2054 - model.projectionStartYear));
+  const rentFactor = Math.pow(1 + rentInflation, Math.max(0, startYear - model.projectionStartYear));
   const futureRentMonthly = ownsNlProperty ? 0 : (model.rentAvoided || 0) * rentFactor;
 
   /*
@@ -1883,6 +1894,7 @@ function setupSideNavigation() {
 
   const setExpanded = expanded => {
     nav.classList.toggle("collapsed", !expanded);
+    document.body.classList.toggle("side-nav-expanded", expanded);
     toggle.setAttribute("aria-expanded", String(expanded));
     try { localStorage.setItem("calculatorSideNavExpanded", expanded ? "yes" : "no"); } catch (_) {}
   };
@@ -1928,14 +1940,16 @@ function setupSideNavigation() {
 }
 
 
-function init() {
-  initTheme();
-  setupSideNavigation();
 
-  addNlBox1RateRow({ year: 2025, bracket1UpTo: 38441, rate1: 35.82, bracket2UpTo: 76817, rate2: 37.48, topRate: 49.5, deductionCap: 37.48 });
-  addNlBox1RateRow({ year: 2026, bracket1UpTo: 38883, rate1: 35.75, bracket2UpTo: 78426, rate2: 37.56, topRate: 49.5, deductionCap: 37.56 });
-  addNlEwfRow({ year: 2025, wozValue: 650000, normalRate: 0.35, highThreshold: 1330000, highRate: 2.35 });
-  addNlEwfRow({ year: 2026, wozValue: 650000, normalRate: 0.35, highThreshold: 1350000, highRate: 2.35 });
+function addNlMortgageDeductionScheduleDefaults() {
+  const startYear = Math.round(inputNumber("projectionStartYear") || 2025);
+  const purchaseStartYear = Math.min(
+    Math.round(inputNumber("aEarliestPurchaseYear") || startYear),
+    Math.round(inputNumber("bPurchaseYear") || startYear)
+  );
+  const termYears = Math.ceil((inputNumber("amsMonths") || 360) / 12);
+  const endYear = Math.max(2054, purchaseStartYear + termYears);
+  addNlMortgageDeductionScheduleDefaults();
   addRateRow({ effectiveFrom: "2025-08-25", euribor: 2.08 });
   addRateRow({ effectiveFrom: "2026-01-01", euribor: 2.12 });
   addEtfContributionRow({ amount: 10000, frequency: "Yearly", month: 1, startYear: 2026, endYear: 2028 });
