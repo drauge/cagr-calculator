@@ -305,3 +305,55 @@ body:not(.side-nav-expanded) {
     padding-bottom: min(72vh, 620px);
   }
 }
+
+
+/* v30 fix: layout-aware nav without breaking page grid */
+body,
+body.side-nav-expanded,
+body:not(.side-nav-expanded) {
+  padding-left: 0 !important;
+}
+
+.container {
+  transition: margin-left 160ms ease, width 160ms ease;
+}
+
+@media (min-width: 1100px) {
+  .side-nav:not(.collapsed) + .container {
+    margin-left: calc(var(--side-nav-open-width) + 32px) !important;
+    margin-right: 16px !important;
+    width: calc(100% - var(--side-nav-open-width) - 48px) !important;
+    max-width: none;
+  }
+
+  .side-nav.collapsed + .container {
+    margin-left: calc(var(--side-nav-collapsed-width) + 32px) !important;
+    margin-right: 16px !important;
+    width: calc(100% - var(--side-nav-collapsed-width) - 48px) !important;
+    max-width: none;
+  }
+}
+
+@media (max-width: 1099px) {
+  .side-nav + .container,
+  .side-nav:not(.collapsed) + .container,
+  .side-nav.collapsed + .container {
+    width: min(1360px, calc(100% - 32px)) !important;
+    margin: 32px auto !important;
+    max-width: none;
+  }
+
+  body.side-nav-expanded {
+    padding-bottom: min(72vh, 620px) !important;
+  }
+
+  body:not(.side-nav-expanded) {
+    padding-bottom: 72px !important;
+  }
+}
+
+/* Keep theme toggle and switches above nav layout changes */
+.top-header {
+  position: relative;
+  z-index: 1;
+}

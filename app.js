@@ -1435,10 +1435,10 @@ function pensionStartYear(model) {
 
 function getPensionScenarioMetrics(result, scenarioKey) {
   const scenario = result?.scenarios?.[scenarioKey];
+  const model = result?.model || readModel();
   const baseYear = pensionBaseYear(model);
   const startYear = pensionStartYear(model);
   const row2053 = getYearRow(scenario, baseYear);
-  const model = result?.model || readModel();
 
   const basePensionAnnual = document.getElementById("pensionHigherBase")?.checked ? 34320 : 22584;
   const conservativeReturn = inputPct("pensionEtfReturn") || 0;
@@ -1451,7 +1451,7 @@ function getPensionScenarioMetrics(result, scenarioKey) {
   const alreadySold = row2053 ? row2053.ltMarketValue <= 0 && row2053.ltDebt <= 0 : false;
 
   if (!row2053) {
-    note = "Projection does not reach 2053.";
+    note = `Projection does not reach pension base year ${baseYear}.`;
   } else if (scenarioKey === (document.getElementById("pensionScenario")?.value || "A") && sellToggle?.checked && !alreadySold) {
     ltSaleProceeds = Math.max(0, (row2053.ltMarketValue || 0) - (row2053.ltDebt || 0));
     etfBase += ltSaleProceeds;

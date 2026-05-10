@@ -412,3 +412,12 @@ Changed:
 - Box 1 / EWF schedules:
   - default rows are extended through the possible NL mortgage horizon.
   - unknown future tax rates/brackets/caps are held constant at last-known defaults.
+
+
+## v30 fix: runtime and layout repair
+
+Fixed:
+- Pension/disposable-income runtime crash caused by using `model` before declaration.
+- This crash prevented all calculators from rendering.
+- Reworked v29 navigation layout override so the open nav takes page space without applying global body padding that broke the grid.
+- Light/dark toggle remains independent of navigation state.
