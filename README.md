@@ -327,3 +327,33 @@ Limitations:
 - The model estimates the tax benefit from mortgage interest only; one-off financing costs are not included.
 - It assumes you satisfy the own-home and annuity/linear repayment requirements for mortgage interest deduction.
 - If salary/bonus or WOZ values are missing, the UI shows a warning and falls back where possible.
+
+
+## v26 changes: scheduled NL mortgage-interest deduction assumptions
+
+Changed NL mortgage-interest deduction inputs from one static set into yearly schedules:
+- Box 1 tax / mortgage deduction schedule:
+  - year
+  - bracket 1 limit and rate
+  - bracket 2 limit and rate
+  - top rate
+  - mortgage-interest deduction cap
+- Eigenwoningforfait / WOZ schedule:
+  - year
+  - WOZ value
+  - normal EWF rate
+  - high-value threshold
+  - high-value rate
+
+The active row is the latest row with `year <= calculation year`, similar to the Euribor schedule.
+
+Yearly details and CSV now include:
+- Box 1 tax before own-home deduction
+- Box 1 tax after own-home deduction
+- NL property tax deduction/year
+- eigenwoningforfait
+- gross salary + bonus
+
+Future pension income now also shows:
+- disposable income after gross NL mortgage payment
+- disposable income in today's EUR

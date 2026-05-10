@@ -124,17 +124,18 @@
 </div>
 
 <h3>NL mortgage interest deduction</h3>
-<div class="grid">
-<label>Tax year for deduction rates
-  <select id="nlMortgageTaxYear"><option value="2026" selected>2026</option><option value="2025">2025</option></select>
-</label>
-<label>WOZ value for eigenwoningforfait (EUR) <input id="nlWozValue" type="number" value="650000" step="1000"/></label>
-<label>WOZ annual growth (%) <input id="nlWozGrowth" type="number" value="0" step="0.1"/></label>
-<label>Eigenwoningforfait normal rate (%) <input id="nlEwfRate" type="number" value="0.35" step="0.01"/></label>
-<label>Eigenwoningforfait high-value threshold (EUR) <input id="nlEwfHighThreshold" type="number" value="1350000" step="1000"/></label>
-<label>Eigenwoningforfait high-value rate (%) <input id="nlEwfHighRate" type="number" value="2.35" step="0.01"/></label>
-<label>High-income deduction cap (%) <input id="nlMortgageDeductionCapRate" type="number" value="37.56" step="0.01"/></label>
-</div>
+<p class="note">
+  Fluctuating Dutch own-home deduction assumptions are entered as yearly schedules. The active row is the latest row with year ≤ calculation year.
+</p>
+
+<h4>Box 1 tax / mortgage deduction schedule</h4>
+<div class="section-head"><p class="note">Rates are decimal percentages. Deduction cap limits mortgage-interest deduction in the top bracket.</p><button id="addNlBox1RateRow" type="button">Add Box 1 rate row</button></div>
+<div class="table-wrap"><table id="nlBox1RateTable"><thead><tr><th>Year</th><th>Bracket 1 up to (EUR)</th><th>Rate 1 (%)</th><th>Bracket 2 up to (EUR)</th><th>Rate 2 (%)</th><th>Top rate (%)</th><th>Deduction cap (%)</th><th></th></tr></thead><tbody></tbody></table></div>
+
+<h4>Eigenwoningforfait / WOZ schedule</h4>
+<div class="section-head"><p class="note">WOZ value is used for eigenwoningforfait. Add future rows if thresholds, rates, or WOZ values change.</p><button id="addNlEwfRow" type="button">Add EWF row</button></div>
+<div class="table-wrap"><table id="nlEwfTable"><thead><tr><th>Year</th><th>WOZ value (EUR)</th><th>Normal rate (%)</th><th>High-value threshold (EUR)</th><th>High-value rate (%)</th><th></th></tr></thead><tbody></tbody></table></div>
+
 <p id="nlMortgageTaxWarning" class="note warning"></p>
 
 <h3>Gross salary + bonus for mortgage deduction</h3>
@@ -277,7 +278,7 @@
 <button class="detail-tab-button" data-detail="D" type="button">Scenario D</button>
 </div>
 <div class="table-wrap result-wrap"><table id="detailsTable">
-<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>NL gross mortgage/month</th><th>NL tax benefit/month</th><th>NL net mortgage/month</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Box 3 treaty relief</th><th>Box 3 foreign real estate value</th><th>Box 3 exempt debt allocation</th><th>Box 3 Dutch debt allocation</th><th>2nd property taxable value</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
+<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>NL gross mortgage/month</th><th>NL tax benefit/month</th><th>NL net mortgage/month</th><th>Box 1 tax before own-home deduction</th><th>Box 1 tax after own-home deduction</th><th>NL property tax deduction/year</th><th>Eigenwoningforfait</th><th>Gross salary + bonus</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Box 3 treaty relief</th><th>Box 3 foreign real estate value</th><th>Box 3 exempt debt allocation</th><th>Box 3 Dutch debt allocation</th><th>2nd property taxable value</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
 </table></div>
 </section>
 
@@ -325,10 +326,12 @@
 <div><span>ETF base at EOY 2053</span><strong id="pensionEtfBase">-</strong></div>
 <div><span>Annual net ETF income</span><strong id="pensionEtfIncomeAnnual">-</strong></div>
 <div><span>Monthly net pension income</span><strong id="pensionMonthlyFuture">-</strong></div>
+<div><span>Disposable income after gross NL mortgage</span><strong id="pensionDisposableFuture">-</strong></div>
 </div>
 
 <div class="kpis three">
 <div><span>Monthly income in today's EUR</span><strong id="pensionMonthlyToday">-</strong></div>
+<div><span>Disposable income in today's EUR</span><strong id="pensionDisposableToday">-</strong></div>
 <div><span>2nd sale proceeds added to ETF</span><strong id="pensionLtSaleProceeds">-</strong></div>
 <div><span>Annual Box 3 tax in retirement</span><strong id="pensionBox3Tax">-</strong></div>
 <div><span>Inflation factor to 2054</span><strong id="pensionInflationFactor">-</strong></div>

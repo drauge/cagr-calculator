@@ -152,6 +152,29 @@ function addEtfContributionRow({ amount = 0, frequency = "Yearly", month = 1, st
 }
 
 
+
+function addNlBox1RateRow({ year = 2026, bracket1UpTo = 38883, rate1 = 35.75, bracket2UpTo = 78426, rate2 = 37.56, topRate = 49.5, deductionCap = 37.56 } = {}) {
+  const row = document.querySelector("#nlBox1RateTable tbody").insertRow();
+  addInputCell(row, "number", year, { min: "2000", max: "2100" });
+  addInputCell(row, "number", bracket1UpTo, { min: "0", step: "100" });
+  addInputCell(row, "number", rate1, { min: "0", step: "0.01" });
+  addInputCell(row, "number", bracket2UpTo, { min: "0", step: "100" });
+  addInputCell(row, "number", rate2, { min: "0", step: "0.01" });
+  addInputCell(row, "number", topRate, { min: "0", step: "0.01" });
+  addInputCell(row, "number", deductionCap, { min: "0", step: "0.01" });
+  addRemoveButton(row);
+}
+
+function addNlEwfRow({ year = 2026, wozValue = 650000, normalRate = 0.35, highThreshold = 1350000, highRate = 2.35 } = {}) {
+  const row = document.querySelector("#nlEwfTable tbody").insertRow();
+  addInputCell(row, "number", year, { min: "2000", max: "2100" });
+  addInputCell(row, "number", wozValue, { min: "0", step: "1000" });
+  addInputCell(row, "number", normalRate, { min: "0", step: "0.01" });
+  addInputCell(row, "number", highThreshold, { min: "0", step: "1000" });
+  addInputCell(row, "number", highRate, { min: "0", step: "0.01" });
+  addRemoveButton(row);
+}
+
 function addSalaryBonusRow({ amount = 128000, frequency = "Yearly", month = 1, startYear = 2025, endYear = 2053, description = "salary+bonus" } = {}) {
   const row = document.querySelector("#salaryBonusTable tbody").insertRow();
   addInputCell(row, "number", amount, { min: "0", step: "100" });
@@ -241,13 +264,22 @@ function readModel() {
     amsLoan: inputNumber("amsLoan") || inputNumber("amsPrice"),
     amsRate: inputPct("amsRate"),
     amsMonths: Math.max(1, Math.round(inputNumber("amsMonths") || 360)),
-    nlMortgageTaxYear: document.getElementById("nlMortgageTaxYear")?.value || "2026",
-    nlWozValue: inputNumber("nlWozValue") || inputNumber("amsPrice"),
-    nlWozGrowth: inputPct("nlWozGrowth"),
-    nlEwfRate: inputPct("nlEwfRate"),
-    nlEwfHighThreshold: inputNumber("nlEwfHighThreshold"),
-    nlEwfHighRate: inputPct("nlEwfHighRate"),
-    nlMortgageDeductionCapRate: inputPct("nlMortgageDeductionCapRate"),
+    nlBox1RateRows: tableRows("#nlBox1RateTable").map(([year, bracket1UpTo, rate1, bracket2UpTo, rate2, topRate, deductionCap]) => ({
+      year: Math.round(n(year, start)),
+      bracket1UpTo: n(bracket1UpTo),
+      rate1: n(rate1) / 100,
+      bracket2UpTo: n(bracket2UpTo),
+      rate2: n(rate2) / 100,
+      topRate: n(topRate) / 100,
+      deductionCapRate: n(deductionCap) / 100,
+    })).sort((a, b) => a.year - b.year),
+    nlEwfRows: tableRows("#nlEwfTable").map(([year, wozValue, normalRate, highThreshold, highRate]) => ({
+      year: Math.round(n(year, start)),
+      wozValue: n(wozValue),
+      normalRate: n(normalRate) / 100,
+      highThreshold: n(highThreshold),
+      highRate: n(highRate) / 100,
+    })).sort((a, b) => a.year - b.year),
     salaryBonusRows: tableRows("#salaryBonusTable").map(([amount, frequency, month, startYear, endYear, description]) => ({
       amount: n(amount),
       frequency,
@@ -412,17 +444,20 @@ function buildAmsSchedule(model, purchaseYear, loan) {
 }
 
 
-function getBox1Rates(model) {
-  if (String(model.nlMortgageTaxYear) === "2025") {
+function activeNlBox1RateRow(model, year) {
+  const rows = (model.nlBox1RateRows || []).filter(r => r.year <= year);
+  const row = rows.length ? rows.at(-1) : null;
+
+  if (row) {
     return {
       brackets: [
-        { upTo: 38441, rate: 0.3582 },
-        { upTo: 76817, rate: 0.3748 },
-        { upTo: Infinity, rate: 0.495 },
+        { upTo: row.bracket1UpTo, rate: row.rate1 },
+        { upTo: row.bracket2UpTo, rate: row.rate2 },
+        { upTo: Infinity, rate: row.topRate },
       ],
-      topThreshold: 76817,
-      topRate: 0.495,
-      deductionCapRate: model.nlMortgageDeductionCapRate || 0.3748,
+      topThreshold: row.bracket2UpTo,
+      topRate: row.topRate,
+      deductionCapRate: row.deductionCapRate,
     };
   }
 
@@ -434,7 +469,22 @@ function getBox1Rates(model) {
     ],
     topThreshold: 78426,
     topRate: 0.495,
-    deductionCapRate: model.nlMortgageDeductionCapRate || 0.3756,
+    deductionCapRate: 0.3756,
+  };
+}
+
+function activeNlEwfRow(model, year) {
+  const rows = (model.nlEwfRows || []).filter(r => r.year <= year);
+  const row = rows.length ? rows.at(-1) : null;
+
+  if (row) return row;
+
+  return {
+    year,
+    wozValue: model.amsPrice || 0,
+    normalRate: 0.0035,
+    highThreshold: 1350000,
+    highRate: 0.0235,
   };
 }
 
@@ -464,49 +514,63 @@ function annualSalaryBonusIncome(model, year) {
 }
 
 function nlWozValueForYear(model, year) {
-  const years = Math.max(0, year - model.projectionStartYear);
-  return Math.max(0, (model.nlWozValue || model.amsPrice || 0) * Math.pow(1 + (model.nlWozGrowth || 0), years));
+  return Math.max(0, activeNlEwfRow(model, year).wozValue || 0);
 }
 
 function calculateEigenwoningforfait(model, year) {
-  const woz = nlWozValueForYear(model, year);
-  const threshold = model.nlEwfHighThreshold || Infinity;
+  const row = activeNlEwfRow(model, year);
+  const woz = Math.max(0, row.wozValue || 0);
+  const threshold = row.highThreshold || Infinity;
   const normalBase = Math.min(woz, threshold);
   const highBase = Math.max(0, woz - threshold);
-  return normalBase * (model.nlEwfRate || 0) + highBase * (model.nlEwfHighRate || 0);
+  return normalBase * (row.normalRate || 0) + highBase * (row.highRate || 0);
 }
 
 function calculateMortgageInterestBenefit(model, year, annualInterest) {
   const grossIncome = annualSalaryBonusIncome(model, year);
   const ewf = calculateEigenwoningforfait(model, year);
   const deduction = Math.max(0, annualInterest || 0);
-  const rates = getBox1Rates(model);
+  const rates = activeNlBox1RateRow(model, year);
 
   if (deduction <= 0) {
-    return { grossIncome, ewf, deduction, taxBenefit: 0, warning: "" };
+    const box1TaxBeforeDeduction = calculateBox1Tax(grossIncome + ewf, rates);
+    return { grossIncome, ewf, deduction, taxBenefit: 0, box1TaxBeforeDeduction, box1TaxAfterDeduction: box1TaxBeforeDeduction, warning: "" };
   }
 
   let warning = "";
   if (grossIncome <= 0) {
     warning = "Warning: no gross salary/bonus income is configured for mortgage interest deduction; tax benefit is calculated as 0.";
-    return { grossIncome, ewf, deduction, taxBenefit: 0, warning };
+    const box1TaxBeforeDeduction = calculateBox1Tax(ewf, rates);
+    return { grossIncome, ewf, deduction, taxBenefit: 0, box1TaxBeforeDeduction, box1TaxAfterDeduction: box1TaxBeforeDeduction, warning };
   }
 
   const incomeBeforeDeduction = grossIncome + ewf;
   const incomeAfterDeduction = Math.max(0, incomeBeforeDeduction - deduction);
-  const rawBenefit = calculateBox1Tax(incomeBeforeDeduction, rates) - calculateBox1Tax(incomeAfterDeduction, rates);
+
+  const box1TaxBeforeDeduction = calculateBox1Tax(incomeBeforeDeduction, rates);
+  const box1TaxAfterDeductionBeforeCap = calculateBox1Tax(incomeAfterDeduction, rates);
+  const rawBenefit = box1TaxBeforeDeduction - box1TaxAfterDeductionBeforeCap;
 
   const topBracketDeduction = Math.min(deduction, Math.max(0, incomeBeforeDeduction - rates.topThreshold));
   const highIncomeAdjustment = Math.max(0, topBracketDeduction * Math.max(0, rates.topRate - rates.deductionCapRate));
   const taxBenefit = Math.max(0, rawBenefit - highIncomeAdjustment);
+  const box1TaxAfterDeduction = box1TaxBeforeDeduction - taxBenefit;
 
-  return { grossIncome, ewf, deduction, taxBenefit, highIncomeAdjustment, warning };
+  return { grossIncome, ewf, deduction, taxBenefit, box1TaxBeforeDeduction, box1TaxAfterDeduction, highIncomeAdjustment, warning };
 }
 
 function calculateNlMortgageYear(model, schedule, year) {
   const rows = (schedule || []).filter(r => r.year === year);
   if (!rows.length) {
-    return { months: 0, annualPayment: 0, annualInterest: 0, annualPrincipal: 0, grossMonthlyPayment: 0, taxBenefitAnnual: 0, taxBenefitMonthly: 0, netMonthlyPayment: 0, warning: "" };
+    return {
+      months: 0, annualPayment: 0, annualInterest: 0, annualPrincipal: 0,
+      grossMonthlyPayment: 0, taxBenefitAnnual: 0, taxBenefitMonthly: 0, netMonthlyPayment: 0,
+      grossIncome: annualSalaryBonusIncome(model, year),
+      eigenwoningforfait: calculateEigenwoningforfait(model, year),
+      box1TaxBeforeDeduction: 0,
+      box1TaxAfterDeduction: 0,
+      warning: ""
+    };
   }
 
   const annualPayment = rows.reduce((sum, r) => sum + (r.payment || 0), 0);
@@ -527,6 +591,8 @@ function calculateNlMortgageYear(model, schedule, year) {
     netMonthlyPayment: Math.max(0, (annualPayment - taxBenefitAnnual) / months),
     grossIncome: benefit.grossIncome,
     eigenwoningforfait: benefit.ewf,
+    box1TaxBeforeDeduction: benefit.box1TaxBeforeDeduction || 0,
+    box1TaxAfterDeduction: benefit.box1TaxAfterDeduction || 0,
     highIncomeAdjustment: benefit.highIncomeAdjustment || 0,
     warning: benefit.warning || "",
   };
@@ -1395,11 +1461,14 @@ function calculatePensionFromResult(result) {
   const annualEtfIncome = Math.max(0, grossEtfIncome - pensionTax);
   const totalAnnualFuture = basePensionAnnual + annualEtfIncome;
   const monthlyFuture = totalAnnualFuture / 12;
+  const grossNlMortgageMonthly = row2053?.nlGrossMortgageMonthly || 0;
+  const disposableMonthlyFuture = monthlyFuture - grossNlMortgageMonthly;
 
   const inflationStartYear = Math.round(inputNumber("inflationStartYear")) || model.projectionStartYear;
   const inflationFutureRate = inputPct("inflationFutureRate") || model.personalInflation || 0.033;
   const inflationFactor = calculateInflationFactor(inflationStartYear, 2054, inflationFutureRate);
   const monthlyToday = monthlyFuture / inflationFactor;
+  const disposableMonthlyToday = disposableMonthlyFuture / inflationFactor;
 
   return {
     scenarioKey,
@@ -1411,6 +1480,9 @@ function calculatePensionFromResult(result) {
     annualEtfIncome,
     monthlyFuture,
     monthlyToday,
+    grossNlMortgageMonthly,
+    disposableMonthlyFuture,
+    disposableMonthlyToday,
     inflationFactor,
     note,
   };
@@ -1422,11 +1494,15 @@ function renderPension(result) {
   document.getElementById("pensionEtfBase").textContent = fmtEUR.format(p.etfBase);
   document.getElementById("pensionEtfIncomeAnnual").textContent = fmtEUR.format(p.annualEtfIncome);
   document.getElementById("pensionMonthlyFuture").textContent = fmtEUR.format(p.monthlyFuture);
+  const disposableFutureEl = document.getElementById("pensionDisposableFuture");
+  if (disposableFutureEl) disposableFutureEl.textContent = fmtEUR.format(p.disposableMonthlyFuture);
   document.getElementById("pensionMonthlyToday").textContent = fmtEUR.format(p.monthlyToday);
+  const disposableTodayEl = document.getElementById("pensionDisposableToday");
+  if (disposableTodayEl) disposableTodayEl.textContent = fmtEUR.format(p.disposableMonthlyToday);
   document.getElementById("pensionLtSaleProceeds").textContent = fmtEUR.format(p.ltSaleProceeds);
   document.getElementById("pensionInflationFactor").textContent = `${p.inflationFactor.toFixed(3)}x`;
   document.getElementById("pensionNote").textContent =
-    `${p.note} Pension base: ${fmtEUR.format(p.basePensionAnnual)}/year AOW + employer pension plus ${(p.conservativeReturn * 100).toFixed(1)}% ETF income after estimated Box 3 tax (${fmtEUR.format(p.pensionTax)}).`;
+    `${p.note} Pension base: ${fmtEUR.format(p.basePensionAnnual)}/year AOW + employer pension plus ${(p.conservativeReturn * 100).toFixed(1)}% ETF income after estimated Box 3 tax (${fmtEUR.format(p.pensionTax)}). Disposable income subtracts gross NL mortgage payment (${fmtEUR.format(p.grossNlMortgageMonthly)}/month).`;
 }
 
 function getCurrentSummarySnapshot(result) {
@@ -1453,7 +1529,9 @@ function getCurrentSummarySnapshot(result) {
       { key: "pension.etfBase", label: "Pension · ETF base at EOY 2053", value: pension.etfBase || 0, type: "higher" },
       { key: "pension.annualEtfIncome", label: "Pension · Annual ETF income net", value: pension.annualEtfIncome || 0, type: "higher" },
       { key: "pension.monthlyFuture", label: "Pension · Monthly income future EUR", value: pension.monthlyFuture || 0, type: "higher" },
+      { key: "pension.disposableMonthlyFuture", label: "Pension · Disposable income future EUR", value: pension.disposableMonthlyFuture || 0, type: "higher" },
       { key: "pension.monthlyToday", label: "Pension · Monthly income today's EUR", value: pension.monthlyToday || 0, type: "higher" },
+      { key: "pension.disposableMonthlyToday", label: "Pension · Disposable income today's EUR", value: pension.disposableMonthlyToday || 0, type: "higher" },
       { key: "pension.inflationFactor", label: "Pension · Inflation factor to 2054", value: pension.inflationFactor || 0, type: "lower", format: "factor" }
     );
   } catch (_) {}
@@ -1718,6 +1796,10 @@ function setupTabs() {
 function init() {
   initTheme();
 
+  addNlBox1RateRow({ year: 2025, bracket1UpTo: 38441, rate1: 35.82, bracket2UpTo: 76817, rate2: 37.48, topRate: 49.5, deductionCap: 37.48 });
+  addNlBox1RateRow({ year: 2026, bracket1UpTo: 38883, rate1: 35.75, bracket2UpTo: 78426, rate2: 37.56, topRate: 49.5, deductionCap: 37.56 });
+  addNlEwfRow({ year: 2025, wozValue: 650000, normalRate: 0.35, highThreshold: 1330000, highRate: 2.35 });
+  addNlEwfRow({ year: 2026, wozValue: 650000, normalRate: 0.35, highThreshold: 1350000, highRate: 2.35 });
   addRateRow({ effectiveFrom: "2025-08-25", euribor: 2.08 });
   addRateRow({ effectiveFrom: "2026-01-01", euribor: 2.12 });
   addEtfContributionRow({ amount: 10000, frequency: "Yearly", month: 1, startYear: 2026, endYear: 2028 });
@@ -1739,6 +1821,8 @@ function init() {
   });
 
   document.getElementById("personalInflation")?.addEventListener("input", calculate);
+  document.getElementById("addNlBox1RateRow")?.addEventListener("click", () => { addNlBox1RateRow(); calculate(); });
+  document.getElementById("addNlEwfRow")?.addEventListener("click", () => { addNlEwfRow(); calculate(); });
   document.getElementById("addRateRow")?.addEventListener("click", () => { addRateRow(); calculate(); });
   document.getElementById("addEtfContribution")?.addEventListener("click", () => { addEtfContributionRow(); calculate(); });
   document.getElementById("addLumpContribution")?.addEventListener("click", () => { addLumpContributionRow(); calculate(); });
