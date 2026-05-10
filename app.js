@@ -1424,8 +1424,7 @@ function getYearRow(scenarioResult, year) {
   return scenarioResult.rows.find(r => Number(r.year) === Number(year)) || scenarioResult.rows.at(-1) || null;
 }
 
-function calculatePensionFromResult(result) {
-  const scenarioKey = document.getElementById("pensionScenario")?.value || "A";
+function getPensionScenarioMetrics(result, scenarioKey) {
   const scenario = result?.scenarios?.[scenarioKey];
   const row2053 = getYearRow(scenario, 2053);
   const model = result?.model || readModel();
@@ -1439,14 +1438,10 @@ function calculatePensionFromResult(result) {
   let note = "";
 
   const alreadySold = row2053 ? row2053.ltMarketValue <= 0 && row2053.ltDebt <= 0 : false;
-  if (sellToggle) {
-    sellToggle.disabled = alreadySold;
-    if (alreadySold) sellToggle.checked = false;
-  }
 
   if (!row2053) {
     note = "Projection does not reach 2053.";
-  } else if (sellToggle?.checked && !alreadySold) {
+  } else if (scenarioKey === (document.getElementById("pensionScenario")?.value || "A") && sellToggle?.checked && !alreadySold) {
     ltSaleProceeds = Math.max(0, (row2053.ltMarketValue || 0) - (row2053.ltDebt || 0));
     etfBase += ltSaleProceeds;
     note = `${scenarioKey}: remaining 2nd property is sold at EOY 2053 and equity is added to ETF.`;
@@ -1461,17 +1456,34 @@ function calculatePensionFromResult(result) {
   const annualEtfIncome = Math.max(0, grossEtfIncome - pensionTax);
   const totalAnnualFuture = basePensionAnnual + annualEtfIncome;
   const monthlyFuture = totalAnnualFuture / 12;
-  const grossNlMortgageMonthly = row2053?.nlGrossMortgageMonthly || 0;
-  const disposableMonthlyFuture = monthlyFuture - grossNlMortgageMonthly;
 
   const inflationStartYear = Math.round(inputNumber("inflationStartYear")) || model.projectionStartYear;
   const inflationFutureRate = inputPct("inflationFutureRate") || model.personalInflation || 0.033;
   const inflationFactor = calculateInflationFactor(inflationStartYear, 2054, inflationFutureRate);
   const monthlyToday = monthlyFuture / inflationFactor;
+
+  const ownsNlProperty = (row2053?.amsValue || 0) > 0;
+  const grossNlMortgageMonthly = ownsNlProperty ? (row2053?.nlGrossMortgageMonthly || 0) : 0;
+
+  const rentInflation = Math.max(0, (model.personalInflation || 0) - inputPct("rentInflationDiscount"));
+  const rentFactor = Math.pow(1 + rentInflation, Math.max(0, 2054 - model.projectionStartYear));
+  const futureRentMonthly = ownsNlProperty ? 0 : (model.rentAvoided || 0) * rentFactor;
+
+  /*
+    Methodology:
+    - Mortgage payments are nominal schedule payments. Do not multiply them by inflation again.
+    - Rent is not fixed nominally, so grow today's/base rent by rent inflation first.
+    - Convert disposable future EUR to today's EUR only after subtracting the future housing cost.
+  */
+  const housingCostFutureMonthly = ownsNlProperty ? grossNlMortgageMonthly : futureRentMonthly;
+  const disposableMonthlyFuture = monthlyFuture - housingCostFutureMonthly;
   const disposableMonthlyToday = disposableMonthlyFuture / inflationFactor;
 
   return {
     scenarioKey,
+    label: scenario?.label || scenarioKey,
+    row2053,
+    ownsNlProperty,
     etfBase,
     ltSaleProceeds,
     conservativeReturn,
@@ -1481,28 +1493,95 @@ function calculatePensionFromResult(result) {
     monthlyFuture,
     monthlyToday,
     grossNlMortgageMonthly,
+    futureRentMonthly,
+    housingCostFutureMonthly,
     disposableMonthlyFuture,
     disposableMonthlyToday,
     inflationFactor,
+    rentInflation,
+    rentFactor,
     note,
   };
+}
+
+function calculatePensionFromResult(result) {
+  const scenarioKey = document.getElementById("pensionScenario")?.value || "A";
+  const p = getPensionScenarioMetrics(result, scenarioKey);
+
+  const sellToggle = document.getElementById("pensionSellLt");
+  const row2053 = p.row2053;
+  const alreadySold = row2053 ? row2053.ltMarketValue <= 0 && row2053.ltDebt <= 0 : false;
+  if (sellToggle) {
+    sellToggle.disabled = alreadySold;
+    if (alreadySold) sellToggle.checked = false;
+  }
+
+  return p;
+}
+
+function calculateAllPensionScenarios(result) {
+  return ["A", "B", "C", "D"].map(key => getPensionScenarioMetrics(result, key));
 }
 
 function renderPension(result) {
   if (!document.getElementById("pensionEtfBase")) return;
   const p = calculatePensionFromResult(result);
+
   document.getElementById("pensionEtfBase").textContent = fmtEUR.format(p.etfBase);
   document.getElementById("pensionEtfIncomeAnnual").textContent = fmtEUR.format(p.annualEtfIncome);
   document.getElementById("pensionMonthlyFuture").textContent = fmtEUR.format(p.monthlyFuture);
+
   const disposableFutureEl = document.getElementById("pensionDisposableFuture");
   if (disposableFutureEl) disposableFutureEl.textContent = fmtEUR.format(p.disposableMonthlyFuture);
+
   document.getElementById("pensionMonthlyToday").textContent = fmtEUR.format(p.monthlyToday);
+
   const disposableTodayEl = document.getElementById("pensionDisposableToday");
   if (disposableTodayEl) disposableTodayEl.textContent = fmtEUR.format(p.disposableMonthlyToday);
+
   document.getElementById("pensionLtSaleProceeds").textContent = fmtEUR.format(p.ltSaleProceeds);
   document.getElementById("pensionInflationFactor").textContent = `${p.inflationFactor.toFixed(3)}x`;
+
   document.getElementById("pensionNote").textContent =
-    `${p.note} Pension base: ${fmtEUR.format(p.basePensionAnnual)}/year AOW + employer pension plus ${(p.conservativeReturn * 100).toFixed(1)}% ETF income after estimated Box 3 tax (${fmtEUR.format(p.pensionTax)}). Disposable income subtracts gross NL mortgage payment (${fmtEUR.format(p.grossNlMortgageMonthly)}/month).`;
+    `${p.note} Pension base: ${fmtEUR.format(p.basePensionAnnual)}/year AOW + employer pension plus ${(p.conservativeReturn * 100).toFixed(1)}% ETF income after estimated Box 3 tax (${fmtEUR.format(p.pensionTax)}). Disposable income subtracts ${p.ownsNlProperty ? "gross NL mortgage payment" : "future rent"} (${fmtEUR.format(p.housingCostFutureMonthly)}/month).`;
+
+  renderPensionScenarioComparison(result);
+}
+
+function renderPensionScenarioComparison(result) {
+  const tbody = document.querySelector("#pensionScenarioComparisonTable tbody");
+  if (!tbody) return;
+
+  const rows = calculateAllPensionScenarios(result);
+  tbody.innerHTML = "";
+
+  rows.forEach(p => {
+    const tr = tbody.insertRow();
+    [
+      p.label,
+      p.ownsNlProperty ? "Yes" : "No",
+      fmtEUR.format(p.monthlyFuture),
+      fmtEUR.format(p.housingCostFutureMonthly),
+      fmtEUR.format(p.disposableMonthlyFuture),
+      fmtEUR.format(p.disposableMonthlyToday),
+    ].forEach((value, index) => {
+      const td = tr.insertCell();
+      td.textContent = value;
+      if (index === 0 || index === 1) td.style.textAlign = "left";
+    });
+  });
+
+  const best = [...rows].sort((a, b) => b.disposableMonthlyToday - a.disposableMonthlyToday)[0];
+  const bestScenarioEl = document.getElementById("bestDisposableScenario");
+  const bestTodayEl = document.getElementById("bestDisposableToday");
+  const rentInflationEl = document.getElementById("rentInflationUsed");
+
+  if (bestScenarioEl) bestScenarioEl.textContent = best ? best.label : "-";
+  if (bestTodayEl) bestTodayEl.textContent = best ? fmtEUR.format(best.disposableMonthlyToday) + "/month" : "-";
+
+  const model = result?.model || readModel();
+  const rentInflation = Math.max(0, (model.personalInflation || 0) - inputPct("rentInflationDiscount"));
+  if (rentInflationEl) rentInflationEl.textContent = `${(rentInflation * 100).toFixed(2)}% / year`;
 }
 
 function getCurrentSummarySnapshot(result) {
@@ -1529,8 +1608,10 @@ function getCurrentSummarySnapshot(result) {
       { key: "pension.etfBase", label: "Pension · ETF base at EOY 2053", value: pension.etfBase || 0, type: "higher" },
       { key: "pension.annualEtfIncome", label: "Pension · Annual ETF income net", value: pension.annualEtfIncome || 0, type: "higher" },
       { key: "pension.monthlyFuture", label: "Pension · Monthly income future EUR", value: pension.monthlyFuture || 0, type: "higher" },
+        { key: "pension.disposableMonthlyFuture", label: "Pension · Disposable income future EUR", value: pension.disposableMonthlyFuture || 0, type: "higher" },
       { key: "pension.disposableMonthlyFuture", label: "Pension · Disposable income future EUR", value: pension.disposableMonthlyFuture || 0, type: "higher" },
       { key: "pension.monthlyToday", label: "Pension · Monthly income today's EUR", value: pension.monthlyToday || 0, type: "higher" },
+        { key: "pension.disposableMonthlyToday", label: "Pension · Disposable income today's EUR", value: pension.disposableMonthlyToday || 0, type: "higher" },
       { key: "pension.disposableMonthlyToday", label: "Pension · Disposable income today's EUR", value: pension.disposableMonthlyToday || 0, type: "higher" },
       { key: "pension.inflationFactor", label: "Pension · Inflation factor to 2054", value: pension.inflationFactor || 0, type: "lower", format: "factor" }
     );
@@ -1793,8 +1874,63 @@ function setupTabs() {
   });
 }
 
+
+function setupSideNavigation() {
+  const nav = document.getElementById("sideNav");
+  const toggle = document.getElementById("sideNavToggle");
+  const links = Array.from(document.querySelectorAll("#sideNavLinks a"));
+  if (!nav || !toggle || !links.length) return;
+
+  const setExpanded = expanded => {
+    nav.classList.toggle("collapsed", !expanded);
+    toggle.setAttribute("aria-expanded", String(expanded));
+    try { localStorage.setItem("calculatorSideNavExpanded", expanded ? "yes" : "no"); } catch (_) {}
+  };
+
+  let stored = "no";
+  try { stored = localStorage.getItem("calculatorSideNavExpanded") || "no"; } catch (_) {}
+  setExpanded(stored === "yes");
+
+  toggle.addEventListener("click", () => {
+    setExpanded(nav.classList.contains("collapsed"));
+  });
+
+  links.forEach(link => {
+    link.addEventListener("click", event => {
+      const target = document.querySelector(link.getAttribute("href"));
+      if (!target) return;
+      event.preventDefault();
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      history.replaceState(null, "", link.getAttribute("href"));
+      if (window.matchMedia("(max-width: 900px)").matches) setExpanded(false);
+    });
+  });
+
+  const observed = links
+    .map(link => document.querySelector(link.getAttribute("href")))
+    .filter(Boolean);
+
+  if ("IntersectionObserver" in window) {
+    const observer = new IntersectionObserver(entries => {
+      const visible = entries
+        .filter(entry => entry.isIntersecting)
+        .sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top))[0];
+
+      if (!visible) return;
+
+      links.forEach(link => {
+        link.classList.toggle("active", link.getAttribute("href") === `#${visible.target.id}`);
+      });
+    }, { rootMargin: "-20% 0px -70% 0px", threshold: [0, 0.1, 0.25] });
+
+    observed.forEach(section => observer.observe(section));
+  }
+}
+
+
 function init() {
   initTheme();
+  setupSideNavigation();
 
   addNlBox1RateRow({ year: 2025, bracket1UpTo: 38441, rate1: 35.82, bracket2UpTo: 76817, rate2: 37.48, topRate: 49.5, deductionCap: 37.48 });
   addNlBox1RateRow({ year: 2026, bracket1UpTo: 38883, rate1: 35.75, bracket2UpTo: 78426, rate2: 37.56, topRate: 49.5, deductionCap: 37.56 });

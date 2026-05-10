@@ -141,3 +141,120 @@ body.dark .diff-bad {
 
 .warning { color: #b42318; font-weight: 600; }
 body.dark .warning { color: #fca5a5; }
+
+
+/* Collapsible pinned left navigation */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 18px;
+}
+
+.side-nav {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 20;
+  width: 260px;
+  max-height: calc(100vh - 32px);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px var(--shadow);
+  overflow: hidden;
+  transition: width 160ms ease, max-height 160ms ease, transform 160ms ease;
+}
+
+.side-nav.collapsed {
+  width: 52px;
+  max-height: 52px;
+}
+
+.side-nav-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 0;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  padding: 12px 13px;
+  box-shadow: none;
+  text-align: left;
+}
+
+.side-nav-toggle:hover {
+  background: var(--tab-bg-hover);
+  color: var(--accent);
+}
+
+.side-nav-toggle-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+  min-width: 24px;
+  text-align: center;
+}
+
+.side-nav.collapsed .side-nav-toggle-text,
+.side-nav.collapsed .side-nav-links {
+  display: none;
+}
+
+.side-nav-links {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  max-height: calc(100vh - 84px);
+  overflow-y: auto;
+}
+
+.side-nav-links a {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  line-height: 1.18;
+}
+
+.side-nav-links a.sub {
+  padding-left: 22px;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.side-nav-links a:hover,
+.side-nav-links a.active {
+  background: var(--tab-bg-hover);
+  color: var(--accent);
+}
+
+.side-nav-links a.active {
+  font-weight: 700;
+}
+
+@media (min-width: 1480px) {
+  .container {
+    margin-left: max(320px, calc((100vw - 1360px) / 2));
+  }
+}
+
+@media (max-width: 900px) {
+  .side-nav {
+    top: auto;
+    bottom: 16px;
+    left: 16px;
+    width: min(320px, calc(100vw - 32px));
+    max-height: min(70vh, 580px);
+  }
+
+  .side-nav.collapsed {
+    width: 54px;
+    max-height: 54px;
+  }
+
+  .side-nav-links {
+    max-height: calc(70vh - 70px);
+  }
+}

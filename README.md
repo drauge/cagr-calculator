@@ -357,3 +357,38 @@ Yearly details and CSV now include:
 Future pension income now also shows:
 - disposable income after gross NL mortgage payment
 - disposable income in today's EUR
+
+
+## v27 changes: retirement disposable income ranking
+
+Added a scenario-wide retirement disposable-income comparison.
+
+Methodology:
+- For scenarios with NL property:
+  - housing cost = gross NL mortgage payment/month from the mortgage schedule
+  - mortgage payment is a nominal schedule amount, so it is not inflated again
+- For scenarios without NL property:
+  - housing cost = Rent avoided grown to 2054 using rent inflation
+  - rent inflation = max(0, Personal inflation - Rent inflation discount)
+  - default discount = 1.1 percentage points
+- Disposable future income:
+  - Monthly net pension income - future housing cost
+- Disposable income in today's EUR:
+  - Disposable future income / inflation factor
+
+Added:
+- Rent inflation discount vs personal inflation input
+- Best disposable income scenario KPI
+- Best disposable income today KPI
+- Scenario comparison table in the pension section
+
+
+## v28 changes: collapsible left navigation
+
+Added a pinned, collapsible left navigation panel:
+- click the navigation button to expand/collapse
+- contains links to key sections and subsections
+- clicking a link smoothly scrolls to that section
+- active section is highlighted while scrolling
+- collapsed/expanded state is stored in browser localStorage
+- on small screens the panel moves to the bottom-left
