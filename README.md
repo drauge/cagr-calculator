@@ -596,3 +596,16 @@ Changed:
   - max NL mortgage
   - gap vs reference target price
   - forecast Box 1 income / financing-load percentage / test rate
+
+
+## v45 changes: direct rent inflation and pension affordability validation
+
+Changed:
+- Replaced derived rent inflation formula with direct Rent inflation (%) input.
+- Pension no-NL-property scenarios now grow rent using this direct input.
+
+Added pension affordability validation:
+- housing cost future/month must be <= Default financing-load percentage × Monthly net pension income.
+- For NL-property scenarios, housing cost = gross NL mortgage payment.
+- For no-NL-property scenarios, housing cost = inflation-adjusted rent.
+- Added KPI status and comparison-table pass/fail column.

@@ -237,3 +237,28 @@ body:not(.side-nav-expanded) {
     grid-template-columns: 1fr;
   }
 }
+
+
+.status-ok {
+  color: #047857;
+}
+
+.status-warn {
+  color: #b45309;
+}
+
+.status-bad {
+  color: #b42318;
+}
+
+body.dark .status-ok {
+  color: #34d399;
+}
+
+body.dark .status-warn {
+  color: #fbbf24;
+}
+
+body.dark .status-bad {
+  color: #fca5a5;
+}

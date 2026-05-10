@@ -1681,7 +1681,7 @@ function getPensionScenarioMetrics(result, scenarioKey) {
   const ownsNlProperty = (row2053?.amsValue || 0) > 0;
   const grossNlMortgageMonthly = ownsNlProperty ? (row2053?.nlGrossMortgageMonthly || 0) : 0;
 
-  const rentInflation = Math.max(0, (model.personalInflation || 0) - inputPct("rentInflationDiscount"));
+  const rentInflation = inputPct("rentInflationRate");
   const rentFactor = Math.pow(1 + rentInflation, Math.max(0, startYear - model.projectionStartYear));
   const futureRentMonthly = ownsNlProperty ? 0 : (model.rentAvoided || 0) * rentFactor;
 
@@ -1692,6 +1692,11 @@ function getPensionScenarioMetrics(result, scenarioKey) {
     - Convert disposable future EUR to today's EUR only after subtracting the future housing cost.
   */
   const housingCostFutureMonthly = ownsNlProperty ? grossNlMortgageMonthly : futureRentMonthly;
+  const housingCostRatio = monthlyFuture > 0 ? housingCostFutureMonthly / monthlyFuture : Infinity;
+  const allowedHousingCostRatio = activeNlFinancingLoadPct(model, startYear);
+  const allowedHousingCostMonthly = monthlyFuture * allowedHousingCostRatio;
+  const housingAffordable = housingCostFutureMonthly <= allowedHousingCostMonthly + 0.005;
+
   const disposableMonthlyFuture = monthlyFuture - housingCostFutureMonthly;
   const disposableMonthlyToday = disposableMonthlyFuture / inflationFactor;
 
@@ -1712,6 +1717,10 @@ function getPensionScenarioMetrics(result, scenarioKey) {
     futureRentMonthly,
     housingCostFutureMonthly,
     housingCostTodayMonthly: housingCostFutureMonthly / inflationFactor,
+    housingCostRatio,
+    allowedHousingCostRatio,
+    allowedHousingCostMonthly,
+    housingAffordable,
     disposableMonthlyFuture,
     disposableMonthlyToday,
     inflationFactor,
@@ -1765,6 +1774,23 @@ function renderPension(result) {
 
   document.getElementById("pensionNote").textContent =
     `${p.note} Pension base: ${fmtEUR.format(p.basePensionAnnual)}/year AOW + employer pension plus ${(p.conservativeReturn * 100).toFixed(1)}% ETF income after estimated Box 3 tax (${fmtEUR.format(p.pensionTax)}). Disposable income subtracts ${p.ownsNlProperty ? "gross NL mortgage payment" : "future rent"} (${fmtEUR.format(p.housingCostFutureMonthly)}/month).`;
+
+  const ratioEl = document.getElementById("pensionHousingCostRatio");
+  const allowedEl = document.getElementById("pensionHousingCostAllowed");
+  const statusEl = document.getElementById("pensionAffordabilityStatus");
+  const affordabilityNoteEl = document.getElementById("pensionAffordabilityNote");
+
+  if (ratioEl) ratioEl.textContent = `${(p.housingCostRatio * 100).toFixed(1)}%`;
+  if (allowedEl) allowedEl.textContent = `${(p.allowedHousingCostRatio * 100).toFixed(1)}% = ${fmtEUR.format(p.allowedHousingCostMonthly)}/month`;
+  if (statusEl) {
+    statusEl.textContent = p.housingAffordable ? "Pass" : "Fail";
+    statusEl.className = p.housingAffordable ? "status-ok" : "status-bad";
+  }
+  if (affordabilityNoteEl) {
+    affordabilityNoteEl.textContent =
+      `Validation: housing cost future/month must be <= Default financing-load percentage of Monthly net pension income. ` +
+      `Current test: ${fmtEUR.format(p.housingCostFutureMonthly)} <= ${fmtEUR.format(p.allowedHousingCostMonthly)}.`;
+  }
 
   renderPensionScenarioComparison(result);
   renderLateExecutionComparison(result);
@@ -1855,10 +1881,12 @@ function renderPensionScenarioComparison(result) {
       fmtEUR.format(p.housingCostFutureMonthly),
       fmtEUR.format(p.disposableMonthlyFuture),
       fmtEUR.format(p.disposableMonthlyToday),
+      p.housingAffordable ? "Pass" : "Fail",
     ].forEach((value, index) => {
       const td = tr.insertCell();
       td.textContent = value;
-      if (index === 0 || index === 1) td.style.textAlign = "left";
+      if (index === 0 || index === 1 || index === 6) td.style.textAlign = "left";
+      if (index === 6) td.className = value === "Pass" ? "status-ok" : "status-bad";
     });
   });
 
@@ -1870,8 +1898,7 @@ function renderPensionScenarioComparison(result) {
   if (bestScenarioEl) bestScenarioEl.textContent = best ? best.label : "-";
   if (bestTodayEl) bestTodayEl.textContent = best ? fmtEUR.format(best.disposableMonthlyToday) + "/month" : "-";
 
-  const model = result?.model || readModel();
-  const rentInflation = Math.max(0, (model.personalInflation || 0) - inputPct("rentInflationDiscount"));
+  const rentInflation = inputPct("rentInflationRate");
   if (rentInflationEl) rentInflationEl.textContent = `${(rentInflation * 100).toFixed(2)}% / year`;
 }
 

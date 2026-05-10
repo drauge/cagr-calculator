@@ -360,8 +360,8 @@
 <label>Conservative ETF return from 2054 (%)
   <input id="pensionEtfReturn" type="number" value="6" step="0.1"/>
 </label>
-<label>Rent inflation discount vs personal inflation (%)
-  <input id="rentInflationDiscount" type="number" value="1.1" step="0.1"/>
+<label>Rent inflation (%)
+  <input id="rentInflationRate" type="number" value="4.4" step="0.1"/>
 </label>
 
 <label class="field-label">Sell remaining 2nd property into ETF
@@ -404,10 +404,18 @@
 
 <p id="pensionNote" class="note"></p>
 
+<div class="kpis three">
+<div><span>Housing cost / monthly pension income</span><strong id="pensionHousingCostRatio">-</strong></div>
+<div><span>Allowed by financing-load rule</span><strong id="pensionHousingCostAllowed">-</strong></div>
+<div><span>Pension housing affordability</span><strong id="pensionAffordabilityStatus">-</strong></div>
+</div>
+<p id="pensionAffordabilityNote" class="note"></p>
+
+
 <h3>Retirement disposable income ranking</h3>
 <p class="note"><strong>Retirement affordability interpretation:</strong> scenarios with NL property test whether pension income covers the remaining gross mortgage payment; scenarios without NL property test whether pension income covers inflation-adjusted rent. Compare Disposable today’s EUR/month across scenarios.</p>
 <p class="note">
-  For scenarios with NL property, disposable income subtracts gross NL mortgage payment. For scenarios without NL property, it subtracts future rent grown from Rent avoided using rent inflation.
+  For scenarios with NL property, disposable income subtracts gross NL mortgage payment. For scenarios without NL property, it subtracts future rent grown from Rent avoided using the Rent inflation input.
 </p>
 <div class="kpis three">
 <div><span>Best disposable income scenario</span><strong id="bestDisposableScenario">-</strong></div>
@@ -424,6 +432,7 @@
 <th>Housing cost future/month</th>
 <th>Disposable future/month</th>
 <th>Disposable today's EUR/month</th>
+<th>Housing affordability</th>
 </tr>
 </thead>
 <tbody></tbody>
