@@ -462,3 +462,23 @@ Fixed future NL purchase modeling:
 Goal alignment:
 - Scenarios with NL property show whether retirement pension income can cover the remaining gross mortgage payment.
 - Scenarios without NL property show whether retirement pension income can cover inflation-adjusted rent.
+
+
+## v37 fix: Scenario A execution year search
+
+Changed Scenario A dynamic repayment / NL purchase year logic.
+
+Before:
+- Scenario A rejected a candidate year if the full future scenario later produced a material liquidity shortfall.
+- This could return `null` even when the 2nd mortgage repayment itself was possible.
+
+Now:
+- Scenario A chooses the earliest executable year where, after Jan 1 taxes:
+  - the remaining 2nd mortgage can be repaid; and
+  - NL purchase costs can be paid.
+- Future NL mortgage affordability is no longer used to block the execution year.
+- Later affordability still appears through:
+  - liquidity shortfall;
+  - conditionally feasible / feasible status;
+  - pension disposable income;
+  - yearly details.

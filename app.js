@@ -877,7 +877,43 @@ function simulateForDynamicYear(model, candidateYear) {
     }
 
     if (year === candidateYear) {
-      return canRepayDebtWithAvailableLiquidity(etf, cashReserve, ltDebtJan1, sc.useEtf);
+      /*
+        Scenario A dynamic year is an execution test, not a full retirement affordability test.
+
+        Required in the execution year:
+        1. repay remaining 2nd mortgage;
+        2. pay NL purchase costs.
+
+        NL purchase price itself is financed by the new NL mortgage, so it is not a cash
+        liquidity requirement here. Later mortgage affordability is evaluated separately
+        through liquidity shortfall and pension disposable income.
+      */
+      let etfAvailable = etf;
+      let cashAvailable = cashReserve;
+
+      let debtRemaining = ltDebtJan1;
+      if (sc.useEtf) {
+        const fromEtf = Math.min(etfAvailable, debtRemaining);
+        etfAvailable -= fromEtf;
+        debtRemaining -= fromEtf;
+      }
+
+      const fromCashForDebt = Math.min(cashAvailable, debtRemaining);
+      cashAvailable -= fromCashForDebt;
+      debtRemaining -= fromCashForDebt;
+
+      if (debtRemaining > 0.005) return false;
+
+      let costsRemaining = Math.max(0, model.amsCosts || 0);
+      const fromEtfForCosts = Math.min(etfAvailable, costsRemaining);
+      etfAvailable -= fromEtfForCosts;
+      costsRemaining -= fromEtfForCosts;
+
+      const fromCashForCosts = Math.min(cashAvailable, costsRemaining);
+      cashAvailable -= fromCashForCosts;
+      costsRemaining -= fromCashForCosts;
+
+      return costsRemaining <= 0.005;
     }
 
     for (let month = 1; month <= 12; month += 1) {
@@ -914,24 +950,15 @@ function estimateScenarioAPurchaseYear(model) {
     if (year < sc.earliestPurchaseYear || year > sc.maxWaitYear) continue;
 
     /*
-      Step 1: cheap pre-check.
-      The year must at least be able to repay the 2nd mortgage after Jan 1 taxes.
-    */
-    if (!simulateForDynamicYear(model, year)) continue;
+      Choose the earliest executable year:
+      - after Jan 1 Box 3 tax,
+      - enough ETF/external cash to repay the 2nd mortgage,
+      - enough liquidity to pay NL purchase costs.
 
-    /*
-      Step 2: strict feasibility check.
-      Run the actual Scenario A mechanics with this candidate year:
-      - Jan 1 taxes
-      - 2nd mortgage repayment
-      - NL property purchase costs
-      - monthly housing cashflow
-      - 2nd property local tax
-      - ETF contributions/growth
-      The chosen year must produce no liquidity shortfall.
+      Do not reject the year because of long-run mortgage affordability or retirement
+      disposable income. Those remain visible as shortfall / pension outputs.
     */
-    const test = simulateScenarioAWithFixedYear(model, year);
-    if (test.liquidityShortfall <= 0.005) return year;
+    if (simulateForDynamicYear(model, year)) return year;
   }
 
   return null;
@@ -1110,7 +1137,8 @@ function simulateScenario(model, key) {
   const conditionallyFeasible = state.shortfall > 0 && state.shortfall < feasibilityTolerance;
 
   if (key === "A") {
-    if (state.shortfall > 0 && !conditionallyFeasible) comment = "No feasible dynamic year / material liquidity shortfall";
+    if (sc.purchaseYear === null) comment = "No executable repayment / purchase year found before maximum wait year";
+    else if (state.shortfall > 0 && !conditionallyFeasible) comment = `Executable in ${sc.purchaseYear}, but material later liquidity shortfall ${fmtEUR2.format(state.shortfall)}`;
     else if (conditionallyFeasible) comment = `Conditionally feasible: small liquidity shortfall ${fmtEUR2.format(state.shortfall)}; dynamic repayment/purchase year: ${sc.purchaseYear}`;
     else comment = `Dynamic repayment/purchase year: ${sc.purchaseYear}`;
   }
