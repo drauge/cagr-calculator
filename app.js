@@ -272,6 +272,7 @@ function readModel() {
     amsLoan: inputNumber("amsLoan") || inputNumber("amsPrice"),
     amsRate: inputPct("amsRate"),
     amsMonths: Math.max(1, Math.round(inputNumber("amsMonths") || 360)),
+    nlDefaultFinancingLoadPct: inputPct("nlDefaultFinancingLoadPct"),
     nlOtherAnnualObligations: inputNumber("nlOtherAnnualObligations"),
     nlUseOfferedRateAsTestRate: (document.getElementById("nlUseOfferedRateAsTestRate")?.value || "yes") === "yes",
     nlFinancingLoadRows: tableRows("#nlFinancingLoadTable").map(([year, financingLoadPct]) => ({
@@ -440,8 +441,9 @@ function buildLtSchedule(model) {
 
 
 function activeNlFinancingLoadPct(model, year) {
+  const defaultPct = model.nlDefaultFinancingLoadPct || 0.246;
   const rows = (model.nlFinancingLoadRows || []).filter(r => r.year <= year);
-  return rows.length ? rows.at(-1).financingLoadPct : 0.246;
+  return rows.length ? rows.at(-1).financingLoadPct : defaultPct;
 }
 
 function nlMortgageTestRate(model) {
@@ -2222,8 +2224,6 @@ function init() {
   initTheme();
   syncExecutionYearInputs();
 
-  addNlFinancingLoadRow({ year: 2025, financingLoadPct: 24.6 });
-  addNlFinancingLoadRow({ year: 2026, financingLoadPct: 24.6 });
   addNlMortgageDeductionScheduleDefaults();
   addRateRow({ effectiveFrom: "2025-08-25", euribor: 2.08 });
   addRateRow({ effectiveFrom: "2026-01-01", euribor: 2.12 });

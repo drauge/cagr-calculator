@@ -134,19 +134,25 @@
 
 <h4>Maximum NL mortgage capacity assumptions</h4>
 <p class="note">
-  Official structure: maximum mortgage is constrained by property value and income. The income test uses toetsinkomen × financing-load percentage to get maximum annual mortgage costs, then converts that annual annuity capacity into a maximum loan. Add future rows when financing-load percentages are known; otherwise last known values are carried forward.
+  Simplified default: one financing-load percentage is used for all forecast years. The financing-load percentage is a statutory/table input that depends on income, interest rate and household assumptions; the calculator uses your entered value as the model input. Use the optional override table only if you want to model year-specific lending norms later.
 </p>
 <div class="grid">
+<label>Default financing-load percentage (%) <input id="nlDefaultFinancingLoadPct" type="number" value="24.6" step="0.1"/></label>
 <label>Other annual financial obligations (EUR) <input id="nlOtherAnnualObligations" type="number" value="0" step="100"/></label>
 <label>Use offered NL mortgage rate as test rate?
   <select id="nlUseOfferedRateAsTestRate"><option value="yes" selected>yes, fixed period ≥10y</option><option value="no">no, use 5% test rate</option></select>
 </label>
 </div>
+
+<details class="advanced-block">
+<summary>Advanced: year-specific financing-load overrides</summary>
+<p class="note">Only add rows if you explicitly want a different financing-load percentage from a given year onward. Otherwise the default value above applies to every year.</p>
 <div class="section-head">
-  <p class="note">Financing-load percentage schedule. This is the missing official input lenders use from annual tables based on income and test rate.</p>
-  <button id="addNlFinancingLoadRow" type="button">Add financing-load row</button>
+  <p class="note">Latest row with year ≤ calculation year overrides the default.</p>
+  <button id="addNlFinancingLoadRow" type="button">Add financing-load override</button>
 </div>
 <div class="table-wrap"><table id="nlFinancingLoadTable"><thead><tr><th>Year</th><th>Financing-load percentage (%)</th><th></th></tr></thead><tbody></tbody></table></div>
+</details>
 
 <h4>Box 1 tax / mortgage deduction schedule</h4>
 <div class="section-head">

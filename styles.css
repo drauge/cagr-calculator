@@ -181,3 +181,22 @@ body:not(.side-nav-expanded) {
   background: var(--button-secondary-bg);
   color: var(--button-secondary-text);
 }
+
+
+.advanced-block {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--soft);
+  margin: 10px 0 18px;
+}
+
+.advanced-block summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.advanced-block[open] summary {
+  margin-bottom: 10px;
+}

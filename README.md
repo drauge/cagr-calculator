@@ -566,3 +566,17 @@ Changed the NL purchase model again:
 - The old reference NL property price remains only as a comparison / preview value.
 - The previous "external downpayment required" is now shown as a capacity gap versus the reference target price, not as a required external funding source.
 - External NL funding now mainly means purchase costs.
+
+
+## v43 changes: simplified NL mortgage capacity input
+
+Simplified the maximum NL mortgage capacity model:
+- Financing-load percentage is now a single default input used for all years.
+- Optional year-specific override table is hidden under an advanced collapsible block.
+- If no override row applies, the default value is used.
+- Removed unnecessary default financing-load rows from initialization.
+
+Checked:
+- no recursive schedule helper loop
+- no duplicate late-execution render call
+- app.js syntax check passes
