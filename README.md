@@ -421,3 +421,16 @@ Fixed:
 - This crash prevented all calculators from rendering.
 - Reworked v29 navigation layout override so the open nav takes page space without applying global body padding that broke the grid.
 - Light/dark toggle remains independent of navigation state.
+
+
+## v31 fix: navigation layout rebuilt
+
+The v29/v30 navigation used fixed positioning and body-padding overrides, which could still break grid/layout behavior in browsers.
+
+v31 rebuilds it:
+- wraps navigation + content in `.app-shell`
+- desktop navigation is `position: sticky` inside flex layout, not overlayed
+- content naturally gets remaining width
+- no global body padding hacks
+- mobile navigation remains fixed bottom-left
+- fixed pension runtime ordering again

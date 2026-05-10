@@ -1894,7 +1894,6 @@ function setupSideNavigation() {
 
   const setExpanded = expanded => {
     nav.classList.toggle("collapsed", !expanded);
-    document.body.classList.toggle("side-nav-expanded", expanded);
     toggle.setAttribute("aria-expanded", String(expanded));
     try { localStorage.setItem("calculatorSideNavExpanded", expanded ? "yes" : "no"); } catch (_) {}
   };
