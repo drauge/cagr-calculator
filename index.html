@@ -111,15 +111,35 @@
 <h3>NL property & mortgage</h3>
 <div class="grid">
 <label>NL property purchase price (EUR) <input id="amsPrice" type="number" value="650000"/></label>
-<label>NL property mortgage amount (EUR) <input id="amsLoan" type="number" value="650000"/></label>
+<label>NL mortgage amount (EUR, 0 downpayment default) <input id="amsLoan" type="number" value="650000"/></label>
 <label>NL mortgage rate (%) <input id="amsRate" type="number" value="4.06" step="0.01"/></label>
-<label>NL property net mortgage payment/month (EUR) <input id="amsNetMortgagePayment" type="number" value="2400"/></label>
 <label>NL mortgage term months <input id="amsMonths" type="number" value="360"/></label>
+<label>Calculated gross mortgage payment/month (EUR) <input id="amsGrossMortgagePaymentPreview" type="number" readonly/></label>
+<label>Calculated net mortgage payment/month (EUR) <input id="amsNetMortgagePaymentPreview" type="number" readonly/></label>
+<label>Mortgage interest tax benefit/month (EUR) <input id="amsMortgageTaxBenefitPreview" type="number" readonly/></label>
 <label>NL property annual appreciation (%) <input id="amsAppreciation" type="number" value="5.0" step="0.1"/></label>
 <label>Purchase costs (EUR) <input id="amsCosts" type="number" value="25000"/></label>
 <label>Monthly ownership costs (EUR) <input id="ownershipCosts" type="number" value="0"/></label>
 <label>Rent avoided (EUR / month) <input id="rentAvoided" type="number" value="2300"/></label>
 </div>
+
+<h3>NL mortgage interest deduction</h3>
+<div class="grid">
+<label>Tax year for deduction rates
+  <select id="nlMortgageTaxYear"><option value="2026" selected>2026</option><option value="2025">2025</option></select>
+</label>
+<label>WOZ value for eigenwoningforfait (EUR) <input id="nlWozValue" type="number" value="650000" step="1000"/></label>
+<label>WOZ annual growth (%) <input id="nlWozGrowth" type="number" value="0" step="0.1"/></label>
+<label>Eigenwoningforfait normal rate (%) <input id="nlEwfRate" type="number" value="0.35" step="0.01"/></label>
+<label>Eigenwoningforfait high-value threshold (EUR) <input id="nlEwfHighThreshold" type="number" value="1350000" step="1000"/></label>
+<label>Eigenwoningforfait high-value rate (%) <input id="nlEwfHighRate" type="number" value="2.35" step="0.01"/></label>
+<label>High-income deduction cap (%) <input id="nlMortgageDeductionCapRate" type="number" value="37.56" step="0.01"/></label>
+</div>
+<p id="nlMortgageTaxWarning" class="note warning"></p>
+
+<h3>Gross salary + bonus for mortgage deduction</h3>
+<div class="section-head"><p class="note">Used to estimate Box 1 tax benefit from mortgage interest deduction. Add salary and bonus rows over time.</p><button id="addSalaryBonusRow" type="button">Add income row</button></div>
+<div class="table-wrap"><table id="salaryBonusTable"><thead><tr><th>Amount (EUR)</th><th>Frequency</th><th>Month</th><th>Start year</th><th>End year</th><th>Description</th><th></th></tr></thead><tbody></tbody></table></div>
 
 <h3>Euribor6M schedule</h3>
 <div class="section-head"><p class="note">Used for the 2nd-property-abroad mortgage forecast.</p><button id="addRateRow" type="button">Add rate row</button></div>
@@ -257,7 +277,7 @@
 <button class="detail-tab-button" data-detail="D" type="button">Scenario D</button>
 </div>
 <div class="table-wrap result-wrap"><table id="detailsTable">
-<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Box 3 treaty relief</th><th>Box 3 foreign real estate value</th><th>Box 3 exempt debt allocation</th><th>Box 3 Dutch debt allocation</th><th>2nd property taxable value</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
+<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>NL gross mortgage/month</th><th>NL tax benefit/month</th><th>NL net mortgage/month</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Box 3 treaty relief</th><th>Box 3 foreign real estate value</th><th>Box 3 exempt debt allocation</th><th>Box 3 Dutch debt allocation</th><th>2nd property taxable value</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
 </table></div>
 </section>
 

@@ -308,3 +308,22 @@ Now:
   - final Box 3 tax
 
 The separate manual debt allocation calculator was replaced by a note, because debt allocation now happens inside every scenario year.
+
+
+## v25 changes: NL mortgage gross/net payment and mortgage-interest deduction
+
+Added official-style Dutch mortgage interest deduction modelling for the NL owner-occupied home.
+
+New behaviour:
+- Gross NL mortgage payment/month is calculated from purchase price / loan, mortgage rate, term, annuity formula.
+- Net NL mortgage payment/month is calculated as gross annuity payment minus estimated monthly mortgage-interest tax benefit.
+- Scenario cashflow now subtracts the calculated net mortgage payment, not a static manual input.
+- Gross salary + bonus inputs are added as rows, similar to ETF contributions.
+- Box 1 tax benefit uses 2025/2026 Box 1 brackets and high-income mortgage deduction cap.
+- Eigenwoningforfait is added to Box 1 income before applying mortgage interest deduction.
+- The yearly details and CSV now include gross mortgage payment/month, tax benefit/month, and net mortgage payment/month.
+
+Limitations:
+- The model estimates the tax benefit from mortgage interest only; one-off financing costs are not included.
+- It assumes you satisfy the own-home and annuity/linear repayment requirements for mortgage interest deduction.
+- If salary/bonus or WOZ values are missing, the UI shows a warning and falls back where possible.

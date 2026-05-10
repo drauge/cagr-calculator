@@ -151,6 +151,18 @@ function addEtfContributionRow({ amount = 0, frequency = "Yearly", month = 1, st
   addRemoveButton(row);
 }
 
+
+function addSalaryBonusRow({ amount = 128000, frequency = "Yearly", month = 1, startYear = 2025, endYear = 2053, description = "salary+bonus" } = {}) {
+  const row = document.querySelector("#salaryBonusTable tbody").insertRow();
+  addInputCell(row, "number", amount, { min: "0", step: "100" });
+  addSelectCell(row, frequency, ["Yearly", "Monthly"]);
+  addInputCell(row, "number", month, { min: "1", max: "12", step: "1" });
+  addInputCell(row, "number", startYear, { min: "2000", max: "2100" });
+  addInputCell(row, "number", endYear, { min: "2000", max: "2100" });
+  addInputCell(row, "text", description);
+  addRemoveButton(row);
+}
+
 function addLumpContributionRow({ amount = 0, year = 2026, month = 1, destination = "ETF", description = "" } = {}) {
   const row = document.querySelector("#lumpContributionTable tbody").insertRow();
   addInputCell(row, "number", amount, { min: "0", step: "100" });
@@ -226,12 +238,26 @@ function readModel() {
     })).sort((a, b) => a.lower - b.lower),
 
     amsPrice: inputNumber("amsPrice"),
-    amsLoan: inputNumber("amsLoan"),
+    amsLoan: inputNumber("amsLoan") || inputNumber("amsPrice"),
     amsRate: inputPct("amsRate"),
     amsMonths: Math.max(1, Math.round(inputNumber("amsMonths") || 360)),
+    nlMortgageTaxYear: document.getElementById("nlMortgageTaxYear")?.value || "2026",
+    nlWozValue: inputNumber("nlWozValue") || inputNumber("amsPrice"),
+    nlWozGrowth: inputPct("nlWozGrowth"),
+    nlEwfRate: inputPct("nlEwfRate"),
+    nlEwfHighThreshold: inputNumber("nlEwfHighThreshold"),
+    nlEwfHighRate: inputPct("nlEwfHighRate"),
+    nlMortgageDeductionCapRate: inputPct("nlMortgageDeductionCapRate"),
+    salaryBonusRows: tableRows("#salaryBonusTable").map(([amount, frequency, month, startYear, endYear, description]) => ({
+      amount: n(amount),
+      frequency,
+      month: Math.round(n(month, 1)),
+      startYear: Math.round(n(startYear, start)),
+      endYear: Math.round(n(endYear, retirement)),
+      description,
+    })),
     amsAppreciation: inputPct("amsAppreciation"),
     amsCosts: inputNumber("amsCosts"),
-    amsNetMortgagePayment: inputNumber("amsNetMortgagePayment"),
     ownershipCosts: inputNumber("ownershipCosts"),
     rentAvoided: inputNumber("rentAvoided"),
 
@@ -383,6 +409,127 @@ function buildAmsSchedule(model, purchaseYear, loan) {
   }
 
   return rows;
+}
+
+
+function getBox1Rates(model) {
+  if (String(model.nlMortgageTaxYear) === "2025") {
+    return {
+      brackets: [
+        { upTo: 38441, rate: 0.3582 },
+        { upTo: 76817, rate: 0.3748 },
+        { upTo: Infinity, rate: 0.495 },
+      ],
+      topThreshold: 76817,
+      topRate: 0.495,
+      deductionCapRate: model.nlMortgageDeductionCapRate || 0.3748,
+    };
+  }
+
+  return {
+    brackets: [
+      { upTo: 38883, rate: 0.3575 },
+      { upTo: 78426, rate: 0.3756 },
+      { upTo: Infinity, rate: 0.495 },
+    ],
+    topThreshold: 78426,
+    topRate: 0.495,
+    deductionCapRate: model.nlMortgageDeductionCapRate || 0.3756,
+  };
+}
+
+function calculateBox1Tax(income, rates) {
+  let remaining = Math.max(0, income || 0);
+  let lower = 0;
+  let tax = 0;
+
+  for (const bracket of rates.brackets) {
+    const upper = bracket.upTo;
+    const slice = Math.max(0, Math.min(remaining, upper - lower));
+    tax += slice * bracket.rate;
+    remaining -= slice;
+    lower = upper;
+    if (remaining <= 0) break;
+  }
+
+  return tax;
+}
+
+function annualSalaryBonusIncome(model, year) {
+  return (model.salaryBonusRows || []).reduce((sum, row) => {
+    if (row.amount <= 0 || year < row.startYear || year > row.endYear) return sum;
+    if (row.frequency === "Monthly") return sum + row.amount * 12;
+    return sum + row.amount;
+  }, 0);
+}
+
+function nlWozValueForYear(model, year) {
+  const years = Math.max(0, year - model.projectionStartYear);
+  return Math.max(0, (model.nlWozValue || model.amsPrice || 0) * Math.pow(1 + (model.nlWozGrowth || 0), years));
+}
+
+function calculateEigenwoningforfait(model, year) {
+  const woz = nlWozValueForYear(model, year);
+  const threshold = model.nlEwfHighThreshold || Infinity;
+  const normalBase = Math.min(woz, threshold);
+  const highBase = Math.max(0, woz - threshold);
+  return normalBase * (model.nlEwfRate || 0) + highBase * (model.nlEwfHighRate || 0);
+}
+
+function calculateMortgageInterestBenefit(model, year, annualInterest) {
+  const grossIncome = annualSalaryBonusIncome(model, year);
+  const ewf = calculateEigenwoningforfait(model, year);
+  const deduction = Math.max(0, annualInterest || 0);
+  const rates = getBox1Rates(model);
+
+  if (deduction <= 0) {
+    return { grossIncome, ewf, deduction, taxBenefit: 0, warning: "" };
+  }
+
+  let warning = "";
+  if (grossIncome <= 0) {
+    warning = "Warning: no gross salary/bonus income is configured for mortgage interest deduction; tax benefit is calculated as 0.";
+    return { grossIncome, ewf, deduction, taxBenefit: 0, warning };
+  }
+
+  const incomeBeforeDeduction = grossIncome + ewf;
+  const incomeAfterDeduction = Math.max(0, incomeBeforeDeduction - deduction);
+  const rawBenefit = calculateBox1Tax(incomeBeforeDeduction, rates) - calculateBox1Tax(incomeAfterDeduction, rates);
+
+  const topBracketDeduction = Math.min(deduction, Math.max(0, incomeBeforeDeduction - rates.topThreshold));
+  const highIncomeAdjustment = Math.max(0, topBracketDeduction * Math.max(0, rates.topRate - rates.deductionCapRate));
+  const taxBenefit = Math.max(0, rawBenefit - highIncomeAdjustment);
+
+  return { grossIncome, ewf, deduction, taxBenefit, highIncomeAdjustment, warning };
+}
+
+function calculateNlMortgageYear(model, schedule, year) {
+  const rows = (schedule || []).filter(r => r.year === year);
+  if (!rows.length) {
+    return { months: 0, annualPayment: 0, annualInterest: 0, annualPrincipal: 0, grossMonthlyPayment: 0, taxBenefitAnnual: 0, taxBenefitMonthly: 0, netMonthlyPayment: 0, warning: "" };
+  }
+
+  const annualPayment = rows.reduce((sum, r) => sum + (r.payment || 0), 0);
+  const annualInterest = rows.reduce((sum, r) => sum + (r.interest || 0), 0);
+  const annualPrincipal = rows.reduce((sum, r) => sum + (r.principal || 0), 0);
+  const months = rows.length;
+  const benefit = calculateMortgageInterestBenefit(model, year, annualInterest);
+  const taxBenefitAnnual = benefit.taxBenefit || 0;
+
+  return {
+    months,
+    annualPayment,
+    annualInterest,
+    annualPrincipal,
+    grossMonthlyPayment: annualPayment / months,
+    taxBenefitAnnual,
+    taxBenefitMonthly: taxBenefitAnnual / months,
+    netMonthlyPayment: Math.max(0, (annualPayment - taxBenefitAnnual) / months),
+    grossIncome: benefit.grossIncome,
+    eigenwoningforfait: benefit.ewf,
+    highIncomeAdjustment: benefit.highIncomeAdjustment || 0,
+    warning: benefit.warning || "",
+  };
 }
 
 function debtJan1(schedule, year, initialDebt) {
@@ -784,7 +931,9 @@ function simulateScenario(model, key) {
       }
 
       if (nlOwned) {
-        const housingCashflow = model.rentAvoided - model.amsNetMortgagePayment - model.ownershipCosts;
+        const nlMortgageInfo = calculateNlMortgageYear(model, nlSchedule, year);
+        const netMortgagePayment = nlMortgageInfo.netMonthlyPayment || 0;
+        const housingCashflow = model.rentAvoided - netMortgagePayment - model.ownershipCosts;
         if (housingCashflow >= 0) {
           state.etf += housingCashflow;
         } else {
@@ -809,6 +958,7 @@ function simulateScenario(model, key) {
     const nlDebt = nlOwned ? debtEoy(nlSchedule, year, nlLoan) : 0;
     const nlValue = amsValueEoy(model, sc.purchaseYear || year, year, nlOwned);
     const nlEquity = Math.max(0, nlValue - nlDebt);
+    const nlMortgageInfo = nlOwned ? calculateNlMortgageYear(model, nlSchedule, year) : { grossMonthlyPayment: 0, taxBenefitMonthly: 0, netMonthlyPayment: 0, annualInterest: 0, eigenwoningforfait: 0, grossIncome: 0, warning: "" };
 
     const totalNetWorth = state.etf + ltEquity + nlEquity + reservedDownpayment;
     const factor = calculateInflationFactor(model.projectionStartYear, year, model.personalInflation);
@@ -823,6 +973,12 @@ function simulateScenario(model, key) {
       amsValue: nlValue,
       amsDebt: nlDebt,
       amsEquity: nlEquity,
+      nlGrossMortgageMonthly: nlMortgageInfo.grossMonthlyPayment || 0,
+      nlMortgageTaxBenefitMonthly: nlMortgageInfo.taxBenefitMonthly || 0,
+      nlNetMortgageMonthly: nlMortgageInfo.netMonthlyPayment || 0,
+      nlMortgageInterestAnnual: nlMortgageInfo.annualInterest || 0,
+      nlEigenwoningforfait: nlMortgageInfo.eigenwoningforfait || 0,
+      nlMortgageTaxWarning: nlMortgageInfo.warning || "",
       totalNetWorth,
       realNetWorth,
       box3Tax: tax,
@@ -1017,6 +1173,9 @@ function renderDetails(result) {
       fmtEUR.format(r.amsValue),
       fmtEUR.format(r.amsDebt),
       fmtEUR.format(r.amsEquity),
+      fmtEUR.format(r.nlGrossMortgageMonthly || 0),
+      fmtEUR.format(r.nlMortgageTaxBenefitMonthly || 0),
+      fmtEUR.format(r.nlNetMortgageMonthly || 0),
       fmtEUR.format(r.totalNetWorth),
       fmtEUR.format(r.realNetWorth),
       fmtEUR.format(r.box3Tax),
@@ -1032,7 +1191,7 @@ function renderDetails(result) {
     values.forEach((v, i) => {
       const td = tr.insertCell();
       td.textContent = v;
-      if (i === 0 || i === 17) td.style.textAlign = "left";
+      if (i === 0 || i === 20) td.style.textAlign = "left";
     });
   });
 }
@@ -1418,12 +1577,37 @@ function renderDebtAllocationCalculator() {
   document.getElementById("allocDutchTaxableBase").textContent = fmtEUR.format(result.dutchTaxableBaseAfterDebt);
 }
 
+
+function renderNlMortgagePreview(result) {
+  const grossEl = document.getElementById("amsGrossMortgagePaymentPreview");
+  if (!grossEl) return;
+
+  const model = result?.model || readModel();
+  const loan = Math.max(0, model.amsPrice || model.amsLoan || 0); // 0-downpayment preview
+  const schedule = buildAmsSchedule(model, model.projectionStartYear, loan);
+  const info = calculateNlMortgageYear(model, schedule, model.projectionStartYear);
+
+  grossEl.value = (info.grossMonthlyPayment || 0).toFixed(2);
+  document.getElementById("amsMortgageTaxBenefitPreview").value = (info.taxBenefitMonthly || 0).toFixed(2);
+  document.getElementById("amsNetMortgagePaymentPreview").value = (info.netMonthlyPayment || 0).toFixed(2);
+
+  const warningEl = document.getElementById("nlMortgageTaxWarning");
+  if (warningEl) {
+    const pieces = [];
+    if (info.warning) pieces.push(info.warning);
+    if (!model.nlWozValue) pieces.push("Warning: WOZ value is missing; eigenwoningforfait uses NL purchase price as fallback.");
+    if (!model.salaryBonusRows || model.salaryBonusRows.length === 0) pieces.push("Warning: no salary/bonus rows are configured; mortgage interest deduction cannot be estimated.");
+    warningEl.textContent = pieces.join(" ");
+  }
+}
+
 function render(result) {
   renderSummary(result);
   renderDetails(result);
   renderChart(result);
   renderInflationCalculator();
   renderPension(result);
+  renderNlMortgagePreview(result);
   renderDebtAllocationCalculator();
   renderStoredComparison(result);
 }
@@ -1444,10 +1628,10 @@ function calculate() {
 
 function downloadCsv() {
   const result = window.__lastResult || simulateAll();
-  const rows = [["Scenario", "Year", "ETF", "2nd property value", "2nd mortgage debt", "2nd property equity", "NL property value", "NL mortgage debt", "NL property equity", "Total net worth", "Real net worth", "Box 3 tax", "Box 3 treaty relief", "Box 3 foreign real estate value", "Box 3 exempt debt allocation", "Box 3 Dutch debt allocation", "2nd property taxable value", "2nd property tax", "Events"]];
+  const rows = [["Scenario", "Year", "ETF", "2nd property value", "2nd mortgage debt", "2nd property equity", "NL property value", "NL mortgage debt", "NL property equity", "NL gross mortgage/month", "NL tax benefit/month", "NL net mortgage/month", "Total net worth", "Real net worth", "Box 3 tax", "Box 3 treaty relief", "Box 3 foreign real estate value", "Box 3 exempt debt allocation", "Box 3 Dutch debt allocation", "2nd property taxable value", "2nd property tax", "Events"]];
   Object.values(result.scenarios).forEach(s => s.rows.forEach(r => rows.push([
     s.label, r.year, r.etf.toFixed(2), r.ltMarketValue.toFixed(2), r.ltDebt.toFixed(2), r.ltEquity.toFixed(2),
-    r.amsValue.toFixed(2), r.amsDebt.toFixed(2), r.amsEquity.toFixed(2), r.totalNetWorth.toFixed(2), r.realNetWorth.toFixed(2), r.box3Tax.toFixed(2), (r.box3TreatyRelief || 0).toFixed(2), (r.box3ForeignRealEstate || 0).toFixed(2), (r.box3ExemptDebtAllocation || 0).toFixed(2), (r.box3DutchDebtAllocation || 0).toFixed(2), (r.secondPropertyTaxableValue || 0).toFixed(2), (r.secondPropertyTax || 0).toFixed(2), r.events
+    r.amsValue.toFixed(2), r.amsDebt.toFixed(2), r.amsEquity.toFixed(2), (r.nlGrossMortgageMonthly || 0).toFixed(2), (r.nlMortgageTaxBenefitMonthly || 0).toFixed(2), (r.nlNetMortgageMonthly || 0).toFixed(2), r.totalNetWorth.toFixed(2), r.realNetWorth.toFixed(2), r.box3Tax.toFixed(2), (r.box3TreatyRelief || 0).toFixed(2), (r.box3ForeignRealEstate || 0).toFixed(2), (r.box3ExemptDebtAllocation || 0).toFixed(2), (r.box3DutchDebtAllocation || 0).toFixed(2), (r.secondPropertyTaxableValue || 0).toFixed(2), (r.secondPropertyTax || 0).toFixed(2), r.events
   ])));
   const csv = rows.map(row => row.map(x => `"${String(x).replaceAll('"', '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -1538,6 +1722,7 @@ function init() {
   addRateRow({ effectiveFrom: "2026-01-01", euribor: 2.12 });
   addEtfContributionRow({ amount: 10000, frequency: "Yearly", month: 1, startYear: 2026, endYear: 2028 });
   addEtfContributionRow({ amount: 16500, frequency: "Yearly", month: 1, startYear: 2029, endYear: 2045 });
+  addSalaryBonusRow({ amount: 128000, frequency: "Yearly", month: 1, startYear: 2025, endYear: 2053, description: "gross salary+bonus" });
   addLumpContributionRow({ amount: 0, year: 2026, month: 1, destination: "2nd repayment", description: "optional" });
   addSecondPropertyTaxBracketRow({ lower: 150000, upper: 300000, rate: 0.5 });
   addSecondPropertyTaxBracketRow({ lower: 300000, upper: 500000, rate: 1 });
@@ -1557,6 +1742,7 @@ function init() {
   document.getElementById("addRateRow")?.addEventListener("click", () => { addRateRow(); calculate(); });
   document.getElementById("addEtfContribution")?.addEventListener("click", () => { addEtfContributionRow(); calculate(); });
   document.getElementById("addLumpContribution")?.addEventListener("click", () => { addLumpContributionRow(); calculate(); });
+  document.getElementById("addSalaryBonusRow")?.addEventListener("click", () => { addSalaryBonusRow(); calculate(); });
   document.getElementById("downloadCsv")?.addEventListener("click", downloadCsv);
   document.getElementById("addSecondPropertyTaxBracket")?.addEventListener("click", () => { addSecondPropertyTaxBracketRow(); calculate(); });
   document.getElementById("chartZoomIn")?.addEventListener("click", () => { chartZoom = Math.min(8, chartZoom * 1.4); if (window.__lastResult) renderChart(window.__lastResult); });

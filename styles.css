@@ -138,3 +138,6 @@ body.dark .diff-bad {
 #secondPropertyTaxTable {
   min-width: 720px;
 }
+
+.warning { color: #b42318; font-weight: 600; }
+body.dark .warning { color: #fca5a5; }
