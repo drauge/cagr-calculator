@@ -794,6 +794,24 @@ function box3Tax(model, dutchInvestments, box3Debt, foreignRealEstateValue, sold
   return calculateBox3Detailed(model, dutchInvestments, box3Debt, foreignRealEstateValue, sold).finalTax;
 }
 
+
+function recordHousingCashflowShortfall(state, amount, label = "monthly housing cashflow") {
+  if (amount <= 0) return;
+
+  let remaining = amount;
+
+  if (state.cashReserve > 0) {
+    const fromCash = Math.min(state.cashReserve, remaining);
+    state.cashReserve -= fromCash;
+    remaining -= fromCash;
+  }
+
+  if (remaining > 0.005) {
+    state.shortfall += remaining;
+    state.events.push(`${label} shortfall ${fmtEUR2.format(remaining)}`);
+  }
+}
+
 function spendFromEtf(state, amount, label = "cash outflow") {
   if (amount <= 0) return;
 
@@ -1026,13 +1044,8 @@ function simulateScenario(model, key) {
       const proceeds = Math.max(0, saleValue - debt - cost - sc.motherReserve);
       ltSold = true;
 
-      if (key === "B" && sc.allocate === "Amsterdam downpayment") {
-        reservedDownpayment += proceeds;
-        state.events.push(`2nd property sold; reserved for NL downpayment ${fmtEUR2.format(proceeds)}`);
-      } else {
-        state.etf += proceeds;
-        state.events.push(`2nd property sold; proceeds to ETF ${fmtEUR2.format(proceeds)}`);
-      }
+      state.etf += proceeds;
+      state.events.push(`2nd property sold; proceeds to ETF ${fmtEUR2.format(proceeds)}`);
     }
 
     if ((key === "A" || key === "B") && year === sc.purchaseYear && !nlOwned) {
@@ -1040,21 +1053,15 @@ function simulateScenario(model, key) {
       nlPurchasePriceUsed = nlPurchasePriceForYear(model, year);
 
       /*
-        Mortgage amount follows the scenario purchase price. If sale proceeds are
-        allocated as a downpayment, they reduce the mortgage; otherwise 0-downpayment
-        means loan equals purchase price.
+        NL property is bought with external liquidity. ETF is not liquidated for
+        the purchase and 2nd-property proceeds are not used as NL downpayment.
+        0-downpayment modelling means mortgage equals the scenario purchase price.
       */
-      const downpayment = Math.min(reservedDownpayment, nlPurchasePriceUsed);
-      nlLoan = Math.max(0, nlPurchasePriceUsed - downpayment);
-      reservedDownpayment = Math.max(0, reservedDownpayment - downpayment);
-
+      nlLoan = nlPurchasePriceUsed;
       nlSchedule = buildAmsSchedule(model, year, nlLoan);
-      spendFromEtf(state, model.amsCosts, "NL property purchase costs");
-      if (reservedDownpayment > 0) {
-        state.etf += reservedDownpayment;
-        reservedDownpayment = 0;
-      }
-      state.events.push(`NL property purchased at ${fmtEUR2.format(nlPurchasePriceUsed)}; mortgage ${fmtEUR2.format(nlLoan)}`);
+
+      recordHousingCashflowShortfall(state, Math.max(0, model.amsCosts || 0), "NL property purchase costs");
+      state.events.push(`NL property purchased externally at ${fmtEUR2.format(nlPurchasePriceUsed)}; mortgage ${fmtEUR2.format(nlLoan)}`);
     }
 
     let contributions = 0;
@@ -1072,9 +1079,17 @@ function simulateScenario(model, key) {
         const netMortgagePayment = nlMortgageInfo.netMonthlyPayment || 0;
         const housingCashflow = model.rentAvoided - netMortgagePayment - model.ownershipCosts;
         if (housingCashflow >= 0) {
+          /*
+            Surplus monthly housing cashflow can be invested.
+          */
           state.etf += housingCashflow;
         } else {
-          spendFromEtf(state, -housingCashflow, "monthly housing cashflow");
+          /*
+            Do not liquidate the rebuilt ETF portfolio to pay the NL mortgage.
+            Negative housing cashflow is an affordability/liquidity shortfall.
+            Scheduled ETF contributions remain invested and continue compounding.
+          */
+          recordHousingCashflowShortfall(state, -housingCashflow, "monthly housing cashflow");
         }
       }
 

@@ -111,17 +111,18 @@
 <h3>NL property & mortgage</h3>
 <div class="grid">
 <label>NL property purchase price today (EUR) <input id="amsPrice" type="number" value="650000"/></label>
-<label>NL mortgage amount (auto = scenario purchase price) <input id="amsLoan" type="number" value="650000"/></label>
+<label>NL mortgage amount (auto = scenario purchase price; purchase funded externally) <input id="amsLoan" type="number" value="650000"/></label>
 <label>NL mortgage rate (%) <input id="amsRate" type="number" value="4.06" step="0.01"/></label>
 <label>NL mortgage term months <input id="amsMonths" type="number" value="360"/></label>
 <label>Calculated gross mortgage payment/month (EUR) <input id="amsGrossMortgagePaymentPreview" type="number" readonly/></label>
 <label>Calculated net mortgage payment/month (EUR) <input id="amsNetMortgagePaymentPreview" type="number" readonly/></label>
 <label>Mortgage interest tax benefit/month (EUR) <input id="amsMortgageTaxBenefitPreview" type="number" readonly/></label>
 <label>NL property annual appreciation (%) <input id="amsAppreciation" type="number" value="5.0" step="0.1"/></label>
-<p class="note">Future NL purchase price = today’s purchase price × personal inflation growth × NL property appreciation growth until the scenario purchase year. NL mortgage amount is set equal to that scenario purchase price unless downpayment proceeds are explicitly allocated.</p>
+<p class="note">Future NL purchase price = today’s purchase price × personal inflation growth × NL property appreciation growth until the scenario purchase year. NL mortgage amount is set equal to that scenario purchase price. NL property purchases are funded with external liquidity; ETF contributions are not liquidated for the purchase.</p>
 <label>Purchase costs (EUR) <input id="amsCosts" type="number" value="25000"/></label>
 <label>Monthly ownership costs (EUR) <input id="ownershipCosts" type="number" value="0"/></label>
 <label>Rent avoided (EUR / month) <input id="rentAvoided" type="number" value="2300"/></label>
+<p class="note">Negative monthly housing cashflow is tracked as a liquidity/affordability shortfall; it does not automatically liquidate ETF contributions. Positive monthly housing surplus is invested into ETF.</p>
 </div>
 
 <h3>NL mortgage interest deduction</h3>
@@ -189,10 +190,10 @@
 <label>2nd property sale year <input id="bSaleYear" type="number" value="2035"/></label>
 <label>2nd property sale month <input id="bSaleMonth" type="number" value="1" min="1" max="12"/></label>
 <label>NL property purchase year <input id="bPurchaseYear" type="number" value="2035"/></label>
-<p class="note">Scenario B execution year links sale year and NL purchase year. Change execution year to test delayed sale / delayed NL purchase.</p>
+<p class="note">Scenario B execution year links sale year and NL purchase year. NL purchase does not use 2nd-property proceeds as downpayment; proceeds are invested into ETF when sold.</p>
 <label>2nd property sale costs (% sale price) <input id="bSaleCostsPct" type="number" value="0" step="0.1"/></label>
 <label>Mother housing reserve (EUR) <input id="bMotherReserve" type="number" value="0"/></label>
-<label>Allocate net proceeds <select id="bAllocate"><option value="ETF" selected>ETF</option><option value="NL property downpayment">NL property downpayment</option></select></label>
+<label>Allocate net proceeds (sale-year scenarios) <select id="bAllocate"><option value="ETF" selected>ETF</option><option value="NL property downpayment">NL property downpayment</option></select></label>
 </div>
 <p class="note">Sale month is treated as after that month’s mortgage payment.</p>
 </div>

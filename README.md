@@ -482,3 +482,38 @@ Now:
   - conditionally feasible / feasible status;
   - pension disposable income;
   - yearly details.
+
+
+## v38 fix: protect ETF rebuild after NL purchase
+
+Changed post-NL-purchase monthly housing cashflow handling:
+- ETF contributions are still added after Scenario A repays the 2nd mortgage and buys the NL property.
+- Negative monthly housing cashflow no longer liquidates the rebuilt ETF portfolio.
+- Instead, it is tracked as an affordability / liquidity shortfall.
+- Positive monthly housing surplus is still invested into ETF.
+
+Reason:
+- Scenario A means "repay 2nd mortgage, buy NL property, then rebuild ETF from scratch".
+- If mortgage payments are unaffordable, that should be shown as a shortfall, not hidden by draining ETF contributions to zero.
+
+
+## v39 changes: normalized scenario cashflow rules
+
+Cashflow rules changed to match the intended scenario definitions:
+- ETF recurring contributions always go into ETF first in every scenario.
+- Scenario A:
+  - ETF can be cashed out to repay the 2nd-property mortgage.
+  - After repayment / NL purchase, recurring contributions continue into ETF.
+  - NL property purchase is funded externally; ETF is not liquidated for the purchase.
+- Scenario B:
+  - 2nd property sale proceeds go into ETF.
+  - NL property is bought with external liquidity.
+  - Sale proceeds are not used as NL downpayment.
+- Scenario C:
+  - ETF contributions continue into ETF.
+  - 2nd property is not sold during the scenario.
+- Scenario D:
+  - 2nd property sale proceeds go into ETF.
+  - No NL property purchase.
+- For scenarios with NL property, purchase costs are tracked as external-liquidity / affordability shortfall, not ETF liquidation.
+- Negative monthly housing cashflow continues to be tracked as shortfall rather than draining ETF.
