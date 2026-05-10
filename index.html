@@ -47,11 +47,41 @@
 </label>
 <label>Tax-free allowance (EUR) <input id="box3Allowance" type="number" value="57684"/></label>
 <label>Debt threshold (EUR) <input id="debtThreshold" type="number" value="3800"/></label>
+<label>Bank/savings balance in Box 3 (€) <input id="box3SavingsBalance" type="number" value="0" min="0" step="1000"/></label>
+<label>Bank/savings fictitious return (%) <input id="box3SavingsReturn" type="number" value="1.37" step="0.01"/></label>
 <label>Other assets fictitious return (%) <input id="otherAssetsReturn" type="number" value="5.88" step="0.01"/></label>
 <label>Debt fictitious return deduction (%) <input id="debtReturn" type="number" value="2.70" step="0.01"/></label>
 <label>Box 3 tax rate (%) <input id="box3TaxRate" type="number" value="36" step="0.1"/></label>
+<label>Foreign real estate treaty relief
+  <select id="box3TreatyReliefEnabled"><option value="yes" selected>yes</option><option value="no">no</option></select>
+</label>
+<label>Debt allocation method
+  <select id="box3DebtAllocationMode"><option value="proportional" selected>proportional to exempt assets</option><option value="full_debt_against_nl">full debt against NL assets</option><option value="no_debt">ignore debt</option></select>
+</label>
 </div>
 <p class="note">Fiscal partner uses 2025 joint Box 3 allowance (EUR 115,368) and joint debt threshold (EUR 7,600), allocated fully to your side.</p>
+
+
+<h3>Box 3 debt allocation calculator</h3>
+<p class="note">
+  Standalone calculator for the proportional treaty-exemption effect. It uses the same category return assumptions as the main model.
+</p>
+<div class="grid">
+<label>Dutch bank/savings (€) <input id="allocSavings" type="number" value="0" min="0" step="1000"/></label>
+<label>Dutch investments / ETF (€) <input id="allocInvestments" type="number" value="400000" min="0" step="1000"/></label>
+<label>Foreign real estate value (€) <input id="allocForeignRealEstate" type="number" value="300000" min="0" step="1000"/></label>
+<label>Box 3 debt (€) <input id="allocDebt" type="number" value="240000" min="0" step="1000"/></label>
+</div>
+<div class="kpis three">
+<div><span>Debt allocated to exempt foreign real estate</span><strong id="allocExemptDebt">-</strong></div>
+<div><span>Debt usable against Dutch taxable assets</span><strong id="allocDutchDebt">-</strong></div>
+<div><span>Estimated Box 3 tax after treaty relief</span><strong id="allocBox3Tax">-</strong></div>
+</div>
+<div class="kpis three">
+<div><span>Tax before treaty relief</span><strong id="allocTaxBeforeRelief">-</strong></div>
+<div><span>Treaty relief</span><strong id="allocTreatyRelief">-</strong></div>
+<div><span>Effective Dutch taxable base after allocated debt</span><strong id="allocDutchTaxableBase">-</strong></div>
+</div>
 
 <h3>2nd property abroad & mortgage</h3>
 <div class="grid">
@@ -70,6 +100,12 @@
 
 <h3>2nd property local real estate tax</h3>
 <div class="grid">
+<label>Official taxable / mass valuation value (€)
+  <input id="secondPropertyTaxableValue" type="number" value="0" min="0" step="1000"/>
+</label>
+<label>Taxable value annual growth (%)
+  <input id="secondPropertyTaxableGrowth" type="number" value="0" step="0.1"/>
+</label>
 <label>Taxable owners / allocation divisor
   <input id="secondPropertyTaxOwners" type="number" value="1" min="1" step="1"/>
 </label>
@@ -81,8 +117,7 @@
 </label>
 </div>
 <p class="note">
-  Generalized progressive real-estate tax. Taxable value is divided by the allocation divisor first, then brackets are applied per allocated share.
-  Example: if two spouses each own half, use divisor 2.
+  Generalized progressive real-estate tax. Use the official taxable / mass valuation value, not purchase price and not equity. Taxable value is divided by the allocation divisor first, then brackets are applied per allocated share. Example: if two spouses each own half, use divisor 2.
 </p>
 <div class="section-head"><p class="note">Bracket lower/upper limits are in EUR. Leave upper limit empty for no cap.</p><button id="addSecondPropertyTaxBracket" type="button">Add tax bracket</button></div>
 <div class="table-wrap"><table id="secondPropertyTaxTable"><thead><tr><th>Lower limit (€)</th><th>Upper limit (€)</th><th>Rate (%)</th><th></th></tr></thead><tbody></tbody></table></div>
@@ -126,7 +161,7 @@
 <h3>A. Repay 2nd mortgage fully + buy NL property</h3>
 <div class="grid">
 <label>Use ETF to repay 2nd mortgage debt <select id="aUseEtf"><option value="yes" selected>yes</option><option value="no">no</option></select></label>
-<label>Extra cash for Scenario A repayment search (€) <input id="aExtraCash" type="number" value="0"/></label>
+<label>Extra cash available for repayment / liquidity (€) <input id="aExtraCash" type="number" value="0"/></label>
 <label>Earliest allowed purchase year <input id="aEarliestPurchaseYear" type="number" value="2026"/></label>
 <label>Maximum wait year <input id="aMaxWaitYear" type="number" value="2045"/></label>
 </div>
@@ -183,7 +218,7 @@
 <div><span>Most liquid final ETF</span><strong id="bestLiquidity">-</strong></div>
 </div>
 <div class="table-wrap result-wrap"><table id="summaryTable">
-<thead><tr><th>Scenario</th><th>Feasible?</th><th>Final ETF</th><th>2nd property equity</th><th>NL property equity</th><th>Total net worth</th><th>Inflation-adjusted net worth</th><th>Total Box 3 tax</th><th>Total 2nd property tax</th><th>Liquidity shortfall</th><th>Comment</th></tr></thead><tbody></tbody>
+<thead><tr><th>Scenario</th><th>Feasible?</th><th>Final ETF</th><th>2nd property equity</th><th>NL property equity</th><th>Total net worth</th><th>Inflation-adjusted net worth</th><th>Total Box 3 tax</th><th>Total treaty relief</th><th>Total 2nd property tax</th><th>Liquidity shortfall</th><th>Comment</th></tr></thead><tbody></tbody>
 </table></div>
 
 <div id="storedComparisonBlock" class="stored-comparison hidden">
@@ -236,7 +271,7 @@
 <button class="detail-tab-button" data-detail="D" type="button">Scenario D</button>
 </div>
 <div class="table-wrap result-wrap"><table id="detailsTable">
-<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
+<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Box 3 treaty relief</th><th>Box 3 exempt debt allocation</th><th>Box 3 Dutch debt allocation</th><th>2nd property taxable value</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
 </table></div>
 </section>
 

@@ -216,3 +216,69 @@ New behavior:
 - Scenario A is infeasible only if no fully feasible year exists before the Maximum wait year.
 
 This means a small shortfall in 2033 should cause the calculator to try 2034 instead of failing the whole scenario.
+
+
+## v21 fix: shared extra cash across all scenarios
+
+Fixed liquidity behavior for scenarios B/C/D.
+
+Before:
+- The field "Extra cash available for repayment" was only included in Scenario A's cash reserve.
+- B/C/D could still show liquidity shortfalls even if that field had a large value.
+
+Now:
+- "Extra cash available for repayment / liquidity" is shared across all scenarios.
+- It is used as external liquidity support for:
+  - Box 3 tax
+  - 2nd property local tax
+  - NL property purchase costs
+  - negative housing cashflow
+  - other scenario cash shortfalls
+- Scenario A still uses the same value in its earliest feasible repayment / NL purchase year search.
+
+As before, this extra cash is treated as liquidity support only:
+- not invested
+- not earning ETF returns
+- not included in net worth
+
+
+## v22 fix: 2nd property local tax base
+
+Fixed the 2nd property local real-estate tax base.
+
+Previous behavior:
+- Local 2nd-property tax was calculated from the modeled market value / purchase-derived value.
+
+Corrected behavior:
+- Local 2nd-property tax now uses a separate **Official taxable / mass valuation value** input.
+- This value can optionally grow annually with **Taxable value annual growth (%)**.
+- The tax module no longer uses purchase price, market value, or property equity as the default tax base.
+
+Rationale:
+- In Lithuania, immovable property tax is based on the taxable value / average market value determined by the Centre of Registers, typically via mass valuation.
+- Mortgage debt is not deducted from this local real-estate tax base.
+
+
+## v23 changes: Box 3 debt allocation and treaty relief
+
+Updated Box 3 logic to model Dutch category returns and proportional debt allocation for foreign treaty-exempt real estate.
+
+Added inputs:
+- Bank/savings balance in Box 3
+- Bank/savings fictitious return
+- Foreign real estate treaty relief toggle
+- Debt allocation method:
+  - proportional to exempt assets
+  - full debt against NL assets
+  - ignore debt
+- Standalone Box 3 debt allocation calculator:
+  - Dutch savings
+  - Dutch investments / ETF
+  - foreign real estate value
+  - Box 3 debt
+  - outputs exempt debt allocation, Dutch usable debt, tax before relief, treaty relief, and final Box 3 tax
+
+Scenario calculations now track:
+- Box 3 treaty relief
+- debt allocated to treaty-exempt foreign real estate
+- debt allocated to Dutch taxable assets

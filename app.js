@@ -196,8 +196,12 @@ function readModel() {
     hasFiscalPartner: document.getElementById("hasFiscalPartner")?.checked === true,
     box3Allowance: inputNumber("box3Allowance"),
     debtThreshold: inputNumber("debtThreshold"),
+    box3SavingsBalance: inputNumber("box3SavingsBalance"),
+    box3SavingsReturn: inputPct("box3SavingsReturn"),
     otherAssetsReturn: inputPct("otherAssetsReturn"),
     debtReturn: inputPct("debtReturn"),
+    box3TreatyReliefEnabled: (document.getElementById("box3TreatyReliefEnabled")?.value || "yes") === "yes",
+    box3DebtAllocationMode: document.getElementById("box3DebtAllocationMode")?.value || "proportional",
     box3TaxRate: inputPct("box3TaxRate"),
 
     ltPropertyValue: inputNumber("ltPropertyValue"),
@@ -211,6 +215,8 @@ function readModel() {
     ltMargin: inputPct("ltMargin"),
     ltAppreciation: inputPct("ltAppreciation"),
     secondPropertyTaxEnabled: (document.getElementById("secondPropertyTaxEnabled")?.value || "yes") === "yes",
+    secondPropertyTaxableValue: inputNumber("secondPropertyTaxableValue"),
+    secondPropertyTaxableGrowth: inputPct("secondPropertyTaxableGrowth"),
     secondPropertyTaxOwners: Math.max(1, Math.round(inputNumber("secondPropertyTaxOwners") || 1)),
     secondPropertyTaxBrackets: tableRows("#secondPropertyTaxTable").map(([lower, upper, rate]) => ({
       lower: n(lower),
@@ -404,11 +410,20 @@ function ltValueEoy(model, year, sold) {
 }
 
 
-function calculateSecondPropertyTax(model, propertyValue) {
-  if (!model.secondPropertyTaxEnabled || propertyValue <= 0) return 0;
+
+function secondPropertyTaxableValueForYear(model, year) {
+  const base = Math.max(0, model.secondPropertyTaxableValue || 0);
+  if (base <= 0) return 0;
+
+  const years = Math.max(0, year - model.projectionStartYear);
+  return base * Math.pow(1 + (model.secondPropertyTaxableGrowth || 0), years);
+}
+
+function calculateSecondPropertyTax(model, taxableValue) {
+  if (!model.secondPropertyTaxEnabled || taxableValue <= 0) return 0;
 
   const owners = Math.max(1, model.secondPropertyTaxOwners || 1);
-  const allocatedValue = propertyValue / owners;
+  const allocatedValue = taxableValue / owners;
   let taxPerOwner = 0;
 
   for (const bracket of model.secondPropertyTaxBrackets || []) {
@@ -449,24 +464,73 @@ function effectiveDebtThreshold(model) {
   return model.hasFiscalPartner ? BOX3_2025_PARTNER_DEBT_THRESHOLD : model.debtThreshold;
 }
 
+function calculateBox3Detailed(model, etf, secondDebt, secondTaxValue, sold) {
+  const savings = Math.max(0, model.box3SavingsBalance || 0);
+  const investments = Math.max(0, etf || 0);
+  const foreignRealEstate = sold ? 0 : Math.max(0, secondTaxValue || 0);
+
+  const grossDebt = model.box3DebtAllocationMode === "no_debt" ? 0 : Math.max(0, secondDebt || 0);
+  const deductibleDebt = Math.max(0, grossDebt - effectiveDebtThreshold(model));
+
+  const totalAssets = savings + investments + foreignRealEstate;
+  const rendementsgrondslag = Math.max(0, totalAssets - deductibleDebt);
+  const taxableBase = Math.max(0, rendementsgrondslag - effectiveAllowance(model));
+  const taxableShare = rendementsgrondslag > 0 ? Math.round((taxableBase / rendementsgrondslag) * 10000) / 10000 : 0;
+
+  let exemptDebtAllocation = 0;
+  if (model.box3DebtAllocationMode === "proportional" && totalAssets > 0 && foreignRealEstate > 0) {
+    exemptDebtAllocation = deductibleDebt * (foreignRealEstate / totalAssets);
+  }
+
+  const dutchDebtAllocation = Math.max(0, deductibleDebt - exemptDebtAllocation);
+  const dutchTaxableBaseAfterDebt = Math.max(0, savings + investments - dutchDebtAllocation);
+
+  const totalForfaitReturnBeforeShare =
+    savings * (model.box3SavingsReturn || 0) +
+    (investments + foreignRealEstate) * (model.otherAssetsReturn || 0) -
+    deductibleDebt * (model.debtReturn || 0);
+
+  const box3IncomeBeforeRelief = Math.max(0, totalForfaitReturnBeforeShare * taxableShare);
+  const taxBeforeRelief = box3IncomeBeforeRelief * (model.box3TaxRate || 0);
+
+  const foreignReturnBeforeShare =
+    foreignRealEstate * (model.otherAssetsReturn || 0) -
+    exemptDebtAllocation * (model.debtReturn || 0);
+
+  const foreignIncomeAfterShare = Math.max(0, foreignReturnBeforeShare * taxableShare);
+
+  let treatyRelief = 0;
+  if (model.box3TreatyReliefEnabled && box3IncomeBeforeRelief > 0 && foreignIncomeAfterShare > 0) {
+    treatyRelief = taxBeforeRelief * Math.min(1, foreignIncomeAfterShare / box3IncomeBeforeRelief);
+  }
+
+  const finalTax = Math.max(0, taxBeforeRelief - treatyRelief);
+
+  return {
+    savings,
+    investments,
+    foreignRealEstate,
+    totalAssets,
+    grossDebt,
+    deductibleDebt,
+    exemptDebtAllocation,
+    dutchDebtAllocation,
+    dutchTaxableBaseAfterDebt,
+    rendementsgrondslag,
+    taxableBase,
+    taxableShare,
+    totalForfaitReturnBeforeShare,
+    box3IncomeBeforeRelief,
+    foreignReturnBeforeShare,
+    foreignIncomeAfterShare,
+    taxBeforeRelief,
+    treatyRelief,
+    finalTax,
+  };
+}
+
 function box3Tax(model, etf, secondDebt, secondTaxValue, sold) {
-  const debtThreshold = effectiveDebtThreshold(model);
-  const allowance = effectiveAllowance(model);
-  const deductibleDebt = sold ? 0 : Math.max(0, secondDebt - debtThreshold);
-  const assets = etf + (sold ? 0 : secondTaxValue);
-  const base = Math.max(0, assets - deductibleDebt);
-  const taxableBase = Math.max(0, base - allowance);
-  const share = base > 0 ? Math.round((taxableBase / base) * 10000) / 10000 : 0;
-
-  const totalReturnBeforeShare = assets * model.otherAssetsReturn - deductibleDebt * model.debtReturn;
-  const box3Income = Math.max(0, totalReturnBeforeShare * share);
-  const taxBeforeRelief = box3Income * model.box3TaxRate;
-
-  const foreignReturn = sold ? 0 : secondTaxValue * model.otherAssetsReturn - deductibleDebt * model.debtReturn;
-  const foreignIncome = Math.max(0, foreignReturn * share);
-  const treatyRelief = box3Income > 0 ? taxBeforeRelief * Math.min(1, Math.max(0, foreignIncome / box3Income)) : 0;
-
-  return Math.max(0, taxBeforeRelief - treatyRelief);
+  return calculateBox3Detailed(model, etf, secondDebt, secondTaxValue, sold).finalTax;
 }
 
 function spendFromEtf(state, amount, label = "cash outflow") {
@@ -627,7 +691,7 @@ function simulateScenario(model, key) {
     }
   }
 
-  const state = { etf: model.etfStartingValue, cashReserve: Math.max(0, (model.externalCashReserve || 0) + (key === "A" ? (sc.extraCash || 0) : 0)), shortfall: 0, events: [] };
+  const state = { etf: model.etfStartingValue, cashReserve: Math.max(0, (model.externalCashReserve || 0) + (model.scenarios?.A?.extraCash || 0)), shortfall: 0, events: [] };
   let ltSold = false;
   let ltRepaid = false;
   let nlOwned = false;
@@ -635,6 +699,7 @@ function simulateScenario(model, key) {
   let nlLoan = model.amsLoan;
   let reservedDownpayment = 0;
   let totalTax = 0;
+  let totalTreatyRelief = 0;
   let totalSecondPropertyTax = 0;
   const rows = [];
 
@@ -642,8 +707,10 @@ function simulateScenario(model, key) {
     state.events = [];
 
     const ltDebtJan1 = ltSold || ltRepaid ? 0 : debtJan1(ltSchedule, year, model.ltLoanAmount);
-    const tax = box3Tax(model, state.etf, ltDebtJan1, model.ltPropertyValue, ltSold || ltRepaid);
+    const box3 = calculateBox3Detailed(model, state.etf, ltDebtJan1, model.ltPropertyValue, ltSold || ltRepaid);
+    const tax = box3.finalTax;
     totalTax += tax;
+    totalTreatyRelief += box3.treatyRelief;
     spendFromEtf(state, tax, "Box 3 tax");
 
     if (key === "A" && sc.repayYear === null && year === model.projectionEndYear && !ltRepaid) {
@@ -718,7 +785,8 @@ function simulateScenario(model, key) {
     const ltDebt = ltSold || ltRepaid ? 0 : debtEoy(ltSchedule, year, model.ltLoanAmount);
     const ltMarket = ltValueEoy(model, year, false);
     const ltValueVisible = ltSold ? 0 : ltMarket;
-    const secondPropertyTax = ltSold ? 0 : calculateSecondPropertyTax(model, ltMarket);
+    const secondPropertyTaxableValue = ltSold ? 0 : secondPropertyTaxableValueForYear(model, year);
+    const secondPropertyTax = ltSold ? 0 : calculateSecondPropertyTax(model, secondPropertyTaxableValue);
     totalSecondPropertyTax += secondPropertyTax;
     spendFromEtf(state, secondPropertyTax, "2nd property local tax");
     const ltEquity = ltSold ? 0 : Math.max(0, ltMarket - ltDebt);
@@ -743,7 +811,12 @@ function simulateScenario(model, key) {
       totalNetWorth,
       realNetWorth,
       box3Tax: tax,
+      box3TaxBeforeRelief: box3.taxBeforeRelief,
+      box3TreatyRelief: box3.treatyRelief,
+      box3ExemptDebtAllocation: box3.exemptDebtAllocation,
+      box3DutchDebtAllocation: box3.dutchDebtAllocation,
       secondPropertyTax,
+      secondPropertyTaxableValue,
       events: state.events.join("; "),
     });
   }
@@ -761,6 +834,7 @@ function simulateScenario(model, key) {
     rows,
     final: last,
     totalBox3Tax: totalTax,
+    totalTreatyRelief,
     totalSecondPropertyTax,
     liquidityShortfall: state.shortfall,
     feasible: state.shortfall <= 0,
@@ -887,6 +961,7 @@ function renderSummary(result) {
       formatCurrency(r.totalNetWorth),
       formatCurrency(r.realNetWorth),
       formatCurrency(s.totalBox3Tax),
+      formatCurrency(s.totalTreatyRelief || 0),
       formatCurrency(s.totalSecondPropertyTax || 0),
       formatCurrency(s.liquidityShortfall),
       s.comment,
@@ -895,7 +970,7 @@ function renderSummary(result) {
     values.forEach((v, i) => {
       const td = tr.insertCell();
       td.textContent = v;
-      if (i === 0 || i === 10) td.style.textAlign = "left";
+      if (i === 0 || i === 11) td.style.textAlign = "left";
     });
   });
 
@@ -929,6 +1004,10 @@ function renderDetails(result) {
       fmtEUR.format(r.totalNetWorth),
       fmtEUR.format(r.realNetWorth),
       fmtEUR.format(r.box3Tax),
+      fmtEUR.format(r.box3TreatyRelief || 0),
+      fmtEUR.format(r.box3ExemptDebtAllocation || 0),
+      fmtEUR.format(r.box3DutchDebtAllocation || 0),
+      fmtEUR.format(r.secondPropertyTaxableValue || 0),
       fmtEUR.format(r.secondPropertyTax || 0),
       r.events,
     ];
@@ -936,7 +1015,7 @@ function renderDetails(result) {
     values.forEach((v, i) => {
       const td = tr.insertCell();
       td.textContent = v;
-      if (i === 0 || i === 12) td.style.textAlign = "left";
+      if (i === 0 || i === 16) td.style.textAlign = "left";
     });
   });
 }
@@ -1186,6 +1265,7 @@ function getCurrentSummarySnapshot(result) {
       { key: `${s.key}.totalNetWorth`, label: `${prefix} · Total net worth`, value: r.totalNetWorth || 0, type: "higher" },
       { key: `${s.key}.realNetWorth`, label: `${prefix} · Inflation-adjusted net worth`, value: r.realNetWorth || 0, type: "higher" },
       { key: `${s.key}.totalBox3Tax`, label: `${prefix} · Total Box 3 tax`, value: s.totalBox3Tax || 0, type: "lower" },
+      { key: `${s.key}.totalTreatyRelief`, label: `${prefix} · Total treaty relief`, value: s.totalTreatyRelief || 0, type: "higher" },
       { key: `${s.key}.totalSecondPropertyTax`, label: `${prefix} · Total 2nd property tax`, value: s.totalSecondPropertyTax || 0, type: "lower" },
       { key: `${s.key}.liquidityShortfall`, label: `${prefix} · Liquidity shortfall`, value: s.liquidityShortfall || 0, type: "lower" }
     );
@@ -1296,12 +1376,38 @@ function setupStoredComparison() {
   document.getElementById("clearStoredCompare")?.addEventListener("click", clearStoredComparison);
 }
 
+
+function renderDebtAllocationCalculator() {
+  if (!document.getElementById("allocBox3Tax")) return;
+
+  const model = readModel();
+  const savings = inputNumber("allocSavings");
+  const investments = inputNumber("allocInvestments");
+  const foreign = inputNumber("allocForeignRealEstate");
+  const debt = inputNumber("allocDebt");
+
+  const calcModel = {
+    ...model,
+    box3SavingsBalance: savings,
+  };
+
+  const result = calculateBox3Detailed(calcModel, investments, debt, foreign, foreign <= 0);
+
+  document.getElementById("allocExemptDebt").textContent = fmtEUR.format(result.exemptDebtAllocation);
+  document.getElementById("allocDutchDebt").textContent = fmtEUR.format(result.dutchDebtAllocation);
+  document.getElementById("allocBox3Tax").textContent = fmtEUR.format(result.finalTax);
+  document.getElementById("allocTaxBeforeRelief").textContent = fmtEUR.format(result.taxBeforeRelief);
+  document.getElementById("allocTreatyRelief").textContent = fmtEUR.format(result.treatyRelief);
+  document.getElementById("allocDutchTaxableBase").textContent = fmtEUR.format(result.dutchTaxableBaseAfterDebt);
+}
+
 function render(result) {
   renderSummary(result);
   renderDetails(result);
   renderChart(result);
   renderInflationCalculator();
   renderPension(result);
+  renderDebtAllocationCalculator();
   renderStoredComparison(result);
 }
 
@@ -1314,17 +1420,17 @@ function calculate() {
     console.error(error);
     const tbody = document.querySelector("#summaryTable tbody");
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="11" style="text-align:left;color:#b42318">Calculation error: ${error.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align:left;color:#b42318">Calculation error: ${error.message}</td></tr>`;
     }
   }
 }
 
 function downloadCsv() {
   const result = window.__lastResult || simulateAll();
-  const rows = [["Scenario", "Year", "ETF", "2nd property value", "2nd mortgage debt", "2nd property equity", "NL property value", "NL mortgage debt", "NL property equity", "Total net worth", "Real net worth", "Box 3 tax", "2nd property tax", "Events"]];
+  const rows = [["Scenario", "Year", "ETF", "2nd property value", "2nd mortgage debt", "2nd property equity", "NL property value", "NL mortgage debt", "NL property equity", "Total net worth", "Real net worth", "Box 3 tax", "Box 3 treaty relief", "Box 3 exempt debt allocation", "Box 3 Dutch debt allocation", "2nd property taxable value", "2nd property tax", "Events"]];
   Object.values(result.scenarios).forEach(s => s.rows.forEach(r => rows.push([
     s.label, r.year, r.etf.toFixed(2), r.ltMarketValue.toFixed(2), r.ltDebt.toFixed(2), r.ltEquity.toFixed(2),
-    r.amsValue.toFixed(2), r.amsDebt.toFixed(2), r.amsEquity.toFixed(2), r.totalNetWorth.toFixed(2), r.realNetWorth.toFixed(2), r.box3Tax.toFixed(2), (r.secondPropertyTax || 0).toFixed(2), r.events
+    r.amsValue.toFixed(2), r.amsDebt.toFixed(2), r.amsEquity.toFixed(2), r.totalNetWorth.toFixed(2), r.realNetWorth.toFixed(2), r.box3Tax.toFixed(2), (r.box3TreatyRelief || 0).toFixed(2), (r.box3ExemptDebtAllocation || 0).toFixed(2), (r.box3DutchDebtAllocation || 0).toFixed(2), (r.secondPropertyTaxableValue || 0).toFixed(2), (r.secondPropertyTax || 0).toFixed(2), r.events
   ])));
   const csv = rows.map(row => row.map(x => `"${String(x).replaceAll('"', '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
