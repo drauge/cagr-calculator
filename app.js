@@ -322,16 +322,18 @@ function readModel() {
         maxWaitYear: Math.round(inputNumber("aMaxWaitYear")),
       },
       B: {
-        saleYear: Math.round(inputNumber("bSaleYear")),
+        executionYear: Math.round(inputNumber("bExecutionYear") || inputNumber("bSaleYear") || inputNumber("bPurchaseYear")),
+        saleYear: Math.round(inputNumber("bExecutionYear") || inputNumber("bSaleYear")),
         saleMonth: Math.round(inputNumber("bSaleMonth") || 1),
-        purchaseYear: Math.round(inputNumber("bPurchaseYear")),
+        purchaseYear: Math.round(inputNumber("bExecutionYear") || inputNumber("bPurchaseYear")),
         saleCostsPct: inputPct("bSaleCostsPct"),
         motherReserve: inputNumber("bMotherReserve"),
         allocate: document.getElementById("bAllocate")?.value || "ETF",
       },
       C: {},
       D: {
-        saleYear: Math.round(inputNumber("dSaleYear")),
+        executionYear: Math.round(inputNumber("dExecutionYear") || inputNumber("dSaleYear")),
+        saleYear: Math.round(inputNumber("dExecutionYear") || inputNumber("dSaleYear")),
         saleMonth: Math.round(inputNumber("dSaleMonth") || 1),
         saleCostsPct: inputPct("dSaleCostsPct"),
         motherReserve: inputNumber("dMotherReserve"),
@@ -1576,7 +1578,77 @@ function renderPension(result) {
     `${p.note} Pension base: ${fmtEUR.format(p.basePensionAnnual)}/year AOW + employer pension plus ${(p.conservativeReturn * 100).toFixed(1)}% ETF income after estimated Box 3 tax (${fmtEUR.format(p.pensionTax)}). Disposable income subtracts ${p.ownsNlProperty ? "gross NL mortgage payment" : "future rent"} (${fmtEUR.format(p.housingCostFutureMonthly)}/month).`;
 
   renderPensionScenarioComparison(result);
+  renderLateExecutionComparison(result);
 }
+
+
+function cloneModelWithExecutionYear(model, executionYear) {
+  return {
+    ...model,
+    scenarios: {
+      ...model.scenarios,
+      B: {
+        ...model.scenarios.B,
+        executionYear,
+        saleYear: executionYear,
+        purchaseYear: executionYear,
+      },
+      D: {
+        ...model.scenarios.D,
+        executionYear,
+        saleYear: executionYear,
+      },
+    },
+  };
+}
+
+function simulateAllWithModel(model) {
+  return {
+    model,
+    scenarios: {
+      A: simulateScenario(model, "A"),
+      B: simulateScenario(model, "B"),
+      C: simulateScenario(model, "C"),
+      D: simulateScenario(model, "D"),
+    },
+  };
+}
+
+function renderLateExecutionComparison(result) {
+  const tbody = document.querySelector("#lateExecutionComparisonTable tbody");
+  if (!tbody) return;
+
+  const baseModel = result?.model || readModel();
+  const start = Math.max(baseModel.projectionStartYear, Math.round(inputNumber("lateExecutionStartYear") || baseModel.projectionStartYear));
+  const end = Math.min(baseModel.projectionEndYear, Math.round(inputNumber("lateExecutionEndYear") || baseModel.projectionEndYear));
+  const step = Math.max(1, Math.round(inputNumber("lateExecutionStep") || 1));
+
+  tbody.innerHTML = "";
+
+  for (let year = start; year <= end; year += step) {
+    const model = cloneModelWithExecutionYear(baseModel, year);
+    const simulated = simulateAllWithModel(model);
+    const b = getPensionScenarioMetrics(simulated, "B");
+    const d = getPensionScenarioMetrics(simulated, "D");
+    const diff = b.disposableMonthlyToday - d.disposableMonthlyToday;
+    const winner = diff >= 0 ? "B" : "D";
+
+    const tr = tbody.insertRow();
+    [
+      year,
+      fmtEUR.format(b.disposableMonthlyToday),
+      fmtEUR.format(d.disposableMonthlyToday),
+      winner,
+      `${diff >= 0 ? "+" : ""}${fmtEUR.format(diff)}`,
+    ].forEach((value, index) => {
+      const td = tr.insertCell();
+      td.textContent = value;
+      if (index === 3) td.className = diff >= 0 ? "diff-good" : "diff-bad";
+      if (index === 4) td.className = diff >= 0 ? "diff-good" : "diff-bad";
+    });
+  }
+}
+
 
 function renderPensionScenarioComparison(result) {
   const tbody = document.querySelector("#pensionScenarioComparisonTable tbody");
@@ -1875,6 +1947,27 @@ function setupCollapsibleBlocks() {
   });
 }
 
+
+function syncExecutionYearInputs() {
+  const bExecution = document.getElementById("bExecutionYear");
+  const bSale = document.getElementById("bSaleYear");
+  const bPurchase = document.getElementById("bPurchaseYear");
+  if (bExecution && bSale && bPurchase) {
+    bExecution.addEventListener("input", () => {
+      bSale.value = bExecution.value;
+      bPurchase.value = bExecution.value;
+    });
+  }
+
+  const dExecution = document.getElementById("dExecutionYear");
+  const dSale = document.getElementById("dSaleYear");
+  if (dExecution && dSale) {
+    dExecution.addEventListener("input", () => {
+      dSale.value = dExecution.value;
+    });
+  }
+}
+
 function initTheme() {
   let stored = "light";
   try { stored = localStorage.getItem("calculatorTheme") || "light"; } catch (_) {}
@@ -1945,6 +2038,7 @@ function addNlMortgageDeductionScheduleDefaults() {
 
 function init() {
   initTheme();
+  syncExecutionYearInputs();
 
   addNlMortgageDeductionScheduleDefaults();
   addRateRow({ effectiveFrom: "2025-08-25", euribor: 2.08 });

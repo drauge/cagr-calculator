@@ -434,3 +434,14 @@ Feasibility:
 
 Pension:
 - "Sell remaining 2nd property into ETF" now applies to every pension scenario where a 2nd property remains at retirement base year, not just the currently selected pension scenario.
+
+
+## v35 changes: late execution for B/D
+
+Added explicit execution-year inputs:
+- Scenario B: execution year links 2nd-property sale year and NL property purchase year.
+- Scenario D: execution year controls the later 2nd-property sale into ETF.
+
+Added late execution sensitivity table:
+- compares Scenario B vs Scenario D for execution years in a user-selected range
+- answers whether B still beats D if the 2nd property cannot be sold in 2035 but can be sold later before retirement

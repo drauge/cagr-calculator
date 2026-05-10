@@ -184,9 +184,11 @@
 <div id="scenarioB" class="tab-panel">
 <h3>B. Sell 2nd property + buy NL property</h3>
 <div class="grid">
+<label>Execution year: sell 2nd property + buy NL property <input id="bExecutionYear" type="number" value="2035"/></label>
 <label>2nd property sale year <input id="bSaleYear" type="number" value="2035"/></label>
 <label>2nd property sale month <input id="bSaleMonth" type="number" value="1" min="1" max="12"/></label>
 <label>NL property purchase year <input id="bPurchaseYear" type="number" value="2035"/></label>
+<p class="note">Scenario B execution year links sale year and NL purchase year. Change execution year to test delayed sale / delayed NL purchase.</p>
 <label>2nd property sale costs (% sale price) <input id="bSaleCostsPct" type="number" value="0" step="0.1"/></label>
 <label>Mother housing reserve (EUR) <input id="bMotherReserve" type="number" value="0"/></label>
 <label>Allocate net proceeds <select id="bAllocate"><option value="ETF" selected>ETF</option><option value="NL property downpayment">NL property downpayment</option></select></label>
@@ -202,13 +204,14 @@
 <div id="scenarioD" class="tab-panel">
 <h3>D. Sell 2nd property + invest into ETF + no NL property purchase</h3>
 <div class="grid">
-<label>2nd property sale year <input id="dSaleYear" type="number" value="2035"/></label>
+<label>Execution year: sell 2nd property + ETF only <input id="dExecutionYear" type="number" value="2045"/></label>
+<label>2nd property sale year <input id="dSaleYear" type="number" value="2045"/></label>
 <label>2nd property sale month <input id="dSaleMonth" type="number" value="1" min="1" max="12"/></label>
 <label>2nd property sale costs (% sale price) <input id="dSaleCostsPct" type="number" value="0" step="0.1"/></label>
 <label>Mother housing reserve (EUR) <input id="dMotherReserve" type="number" value="0"/></label>
 </div>
 <p class="note">Sale month is treated as after that month’s mortgage payment.</p>
-<p class="note">This tests selling the 2nd property and reallocating net proceeds into ETF without buying an NL property.</p>
+<p class="note">This tests selling the 2nd property and reallocating net proceeds into ETF without buying an NL property. Execution year lets you model a later sale before retirement.</p>
 </div>
 </section>
 
@@ -372,6 +375,31 @@
 <tbody></tbody>
 </table>
 </div>
+
+<h3>Late execution sensitivity</h3>
+<p class="note">
+  Tests whether Scenario B still wins if the 2nd property sale and NL property purchase happen later. Rows compare B execution years against D selling in the same year.
+</p>
+<div class="grid">
+<label>Late execution start year <input id="lateExecutionStartYear" type="number" value="2035"/></label>
+<label>Late execution end year <input id="lateExecutionEndYear" type="number" value="2053"/></label>
+<label>Step in years <input id="lateExecutionStep" type="number" value="1" min="1"/></label>
+</div>
+<div class="table-wrap result-wrap">
+<table id="lateExecutionComparisonTable">
+<thead>
+<tr>
+<th>Execution year</th>
+<th>B disposable today</th>
+<th>D disposable today</th>
+<th>Winner</th>
+<th>B - D</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
 </section>
 
 </main>
