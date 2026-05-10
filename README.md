@@ -396,3 +396,18 @@ Reverted to the v27 no-navigation layout and applied only the requested small tw
 - Box 1 / mortgage deduction and EWF schedules are extended through the possible NL mortgage horizon
 - Unknown future tax rates/brackets/caps are held constant at the last known values
 - No left navigation panel
+
+
+## v33 runtime repair
+
+Fixed the real runtime breakage in v32:
+- `function init()` had been accidentally overwritten by the Box 1 schedule helper.
+- The schedule helper recursively called itself.
+- Because `init()` no longer existed correctly, no event listeners were attached and all calculators/toggles appeared dead.
+
+v33 rebuilds the app tail:
+- restores `function init()`
+- keeps `addNlMortgageDeductionScheduleDefaults()` as a separate helper
+- initializes default rows correctly
+- reattaches all event listeners
+- keeps the v27 no-navigation layout and requested defaults

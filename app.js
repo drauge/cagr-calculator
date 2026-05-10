@@ -1834,6 +1834,13 @@ function applyTheme(theme) {
   try { localStorage.setItem("calculatorTheme", theme); } catch (_) {}
 }
 
+function applyTheme(theme) {
+  document.body.classList.toggle("dark", theme === "dark");
+  const toggle = document.getElementById("themeToggle");
+  if (toggle) toggle.checked = theme === "dark";
+  try { localStorage.setItem("calculatorTheme", theme); } catch (_) {}
+}
+
 function initTheme() {
   let stored = "light";
   try { stored = localStorage.getItem("calculatorTheme") || "light"; } catch (_) {}
@@ -1885,7 +1892,6 @@ function setupTabs() {
   });
 }
 
-
 function addNlMortgageDeductionScheduleDefaults() {
   const startYear = Math.round(inputNumber("projectionStartYear") || 2025);
   const earliestA = Math.round(inputNumber("aEarliestPurchaseYear") || startYear);
@@ -1893,12 +1899,25 @@ function addNlMortgageDeductionScheduleDefaults() {
   const purchaseStartYear = Math.min(earliestA, purchaseB);
   const termYears = Math.ceil((inputNumber("amsMonths") || 360) / 12);
   const endYear = Math.max(2054, purchaseStartYear + termYears);
+
+  addNlBox1RateRow({ year: 2025, bracket1UpTo: 38441, rate1: 35.82, bracket2UpTo: 76817, rate2: 37.48, topRate: 49.5, deductionCap: 37.48 });
+  addNlEwfRow({ year: 2025, wozValue: inputNumber("amsPrice") || 650000, normalRate: 0.35, highThreshold: 1330000, highRate: 2.35 });
+
+  for (let year = 2026; year <= endYear; year += 1) {
+    addNlBox1RateRow({ year, bracket1UpTo: 38883, rate1: 35.75, bracket2UpTo: 78426, rate2: 37.56, topRate: 49.5, deductionCap: 37.56 });
+    addNlEwfRow({ year, wozValue: inputNumber("amsPrice") || 650000, normalRate: 0.35, highThreshold: 1350000, highRate: 2.35 });
+  }
+}
+
+function init() {
+  initTheme();
+
   addNlMortgageDeductionScheduleDefaults();
   addRateRow({ effectiveFrom: "2025-08-25", euribor: 2.08 });
   addRateRow({ effectiveFrom: "2026-01-01", euribor: 2.12 });
   addEtfContributionRow({ amount: 10000, frequency: "Yearly", month: 1, startYear: 2026, endYear: 2028 });
   addEtfContributionRow({ amount: 16500, frequency: "Yearly", month: 1, startYear: 2029, endYear: 2045 });
-  addSalaryBonusRow({ amount: 128000, frequency: "Yearly", month: 1, startYear: 2025, endYear: 2053, description: "gross salary+bonus" });
+  addSalaryBonusRow({ amount: 128000, frequency: "Yearly", month: 1, startYear: 2025, endYear: 2054, description: "gross salary+bonus" });
   addLumpContributionRow({ amount: 0, year: 2026, month: 1, destination: "2nd repayment", description: "optional" });
   addSecondPropertyTaxBracketRow({ lower: 150000, upper: 300000, rate: 0.5 });
   addSecondPropertyTaxBracketRow({ lower: 300000, upper: 500000, rate: 1 });
