@@ -506,10 +506,15 @@ function calculateBox1Tax(income, rates) {
 }
 
 function annualSalaryBonusIncome(model, year) {
+  const wageGrowth = Math.max(0, (model.personalInflation || 0) - 0.011);
   return (model.salaryBonusRows || []).reduce((sum, row) => {
     if (row.amount <= 0 || year < row.startYear || year > row.endYear) return sum;
-    if (row.frequency === "Monthly") return sum + row.amount * 12;
-    return sum + row.amount;
+
+    const years = Math.max(0, year - row.startYear);
+    const indexedAmount = row.amount * Math.pow(1 + wageGrowth, years);
+
+    if (row.frequency === "Monthly") return sum + indexedAmount * 12;
+    return sum + indexedAmount;
   }, 0);
 }
 
@@ -527,6 +532,12 @@ function calculateEigenwoningforfait(model, year) {
 }
 
 function calculateMortgageInterestBenefit(model, year, annualInterest) {
+  /*
+    Box 1 own-home logic:
+    taxable income before own-home deduction = gross income + eigenwoningforfait
+    taxable income after deduction = gross income + eigenwoningforfait - deductible mortgage interest
+    tax benefit = Box 1 tax difference, with high-income mortgage-interest deduction cap applied.
+  */
   const grossIncome = annualSalaryBonusIncome(model, year);
   const ewf = calculateEigenwoningforfait(model, year);
   const deduction = Math.max(0, annualInterest || 0);
@@ -1061,10 +1072,17 @@ function simulateScenario(model, key) {
 
   const last = rows.at(-1);
   let comment;
-  if (key === "A") comment = state.shortfall > 0 ? "No feasible dynamic year / liquidity shortfall" : `Dynamic repayment/purchase year: ${sc.purchaseYear}`;
-  else if (key === "B") comment = "Conditional on second-property sale / family feasibility";
-  else if (key === "C") comment = "Baseline; may not satisfy Dutch borrowing capacity";
-  else comment = "Sell second property, invest proceeds into ETF, no NL property";
+  const feasibilityTolerance = 1000;
+  const conditionallyFeasible = state.shortfall > 0 && state.shortfall < feasibilityTolerance;
+
+  if (key === "A") {
+    if (state.shortfall > 0 && !conditionallyFeasible) comment = "No feasible dynamic year / material liquidity shortfall";
+    else if (conditionallyFeasible) comment = `Conditionally feasible: small liquidity shortfall ${fmtEUR2.format(state.shortfall)}; dynamic repayment/purchase year: ${sc.purchaseYear}`;
+    else comment = `Dynamic repayment/purchase year: ${sc.purchaseYear}`;
+  }
+  else if (key === "B") comment = conditionallyFeasible ? `Conditionally feasible: small liquidity shortfall ${fmtEUR2.format(state.shortfall)}` : "Conditional on second-property sale / family feasibility";
+  else if (key === "C") comment = conditionallyFeasible ? `Conditionally feasible: small liquidity shortfall ${fmtEUR2.format(state.shortfall)}` : "Baseline; may not satisfy Dutch borrowing capacity";
+  else comment = conditionallyFeasible ? `Conditionally feasible: small liquidity shortfall ${fmtEUR2.format(state.shortfall)}` : "Sell second property, invest proceeds into ETF, no NL property";
 
   return {
     key,
@@ -1075,7 +1093,8 @@ function simulateScenario(model, key) {
     totalTreatyRelief,
     totalSecondPropertyTax,
     liquidityShortfall: state.shortfall,
-    feasible: state.shortfall <= 0,
+    feasible: state.shortfall <= 0 || conditionallyFeasible,
+    conditionallyFeasible,
     comment,
   };
 }
@@ -1192,7 +1211,7 @@ function renderSummary(result) {
     const tr = tbody.insertRow();
     const values = [
       s.label,
-      s.feasible ? "Yes" : "No",
+      s.conditionallyFeasible ? "Conditional" : (s.feasible ? "Yes" : "No"),
       formatCurrency(r.etf),
       formatCurrency(r.ltEquity),
       formatCurrency(r.amsEquity),
@@ -1452,7 +1471,7 @@ function getPensionScenarioMetrics(result, scenarioKey) {
 
   if (!row2053) {
     note = `Projection does not reach pension base year ${baseYear}.`;
-  } else if (scenarioKey === (document.getElementById("pensionScenario")?.value || "A") && sellToggle?.checked && !alreadySold) {
+  } else if (sellToggle?.checked && !alreadySold) {
     ltSaleProceeds = Math.max(0, (row2053.ltMarketValue || 0) - (row2053.ltDebt || 0));
     etfBase += ltSaleProceeds;
     note = `${scenarioKey}: remaining 2nd property is sold at retirement base year EOY and equity is added to ETF.`;
@@ -1520,11 +1539,11 @@ function calculatePensionFromResult(result) {
   const p = getPensionScenarioMetrics(result, scenarioKey);
 
   const sellToggle = document.getElementById("pensionSellLt");
-  const row2053 = p.row2053;
-  const alreadySold = row2053 ? row2053.ltMarketValue <= 0 && row2053.ltDebt <= 0 : false;
   if (sellToggle) {
-    sellToggle.disabled = alreadySold;
-    if (alreadySold) sellToggle.checked = false;
+    const allRows = ["A", "B", "C", "D"].map(key => getYearRow(result?.scenarios?.[key], pensionBaseYear(result?.model || readModel())));
+    const hasAnyRemainingSecondProperty = allRows.some(row => row && (row.ltMarketValue || 0) > 0 && (row.ltDebt || 0) >= 0);
+    sellToggle.disabled = !hasAnyRemainingSecondProperty;
+    if (!hasAnyRemainingSecondProperty) sellToggle.checked = false;
   }
 
   return p;
@@ -1841,6 +1860,21 @@ function applyTheme(theme) {
   try { localStorage.setItem("calculatorTheme", theme); } catch (_) {}
 }
 
+
+function setupCollapsibleBlocks() {
+  document.querySelectorAll(".collapse-toggle").forEach(button => {
+    const targetId = button.dataset.target;
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    button.addEventListener("click", () => {
+      const collapsed = !target.classList.contains("collapsed");
+      target.classList.toggle("collapsed", collapsed);
+      button.textContent = collapsed ? "Expand" : "Collapse";
+    });
+  });
+}
+
 function initTheme() {
   let stored = "light";
   try { stored = localStorage.getItem("calculatorTheme") || "light"; } catch (_) {}
@@ -1917,7 +1951,7 @@ function init() {
   addRateRow({ effectiveFrom: "2026-01-01", euribor: 2.12 });
   addEtfContributionRow({ amount: 10000, frequency: "Yearly", month: 1, startYear: 2026, endYear: 2028 });
   addEtfContributionRow({ amount: 16500, frequency: "Yearly", month: 1, startYear: 2029, endYear: 2045 });
-  addSalaryBonusRow({ amount: 128000, frequency: "Yearly", month: 1, startYear: 2025, endYear: 2054, description: "gross salary+bonus" });
+  addSalaryBonusRow({ amount: 118000, frequency: "Yearly", month: 1, startYear: 2025, endYear: 2054, description: "gross salary+bonus" });
   addLumpContributionRow({ amount: 0, year: 2026, month: 1, destination: "2nd repayment", description: "optional" });
   addSecondPropertyTaxBracketRow({ lower: 150000, upper: 300000, rate: 0.5 });
   addSecondPropertyTaxBracketRow({ lower: 300000, upper: 500000, rate: 1 });
@@ -1948,6 +1982,7 @@ function init() {
   window.addEventListener("resize", () => { if (window.__lastResult) renderChart(window.__lastResult); });
 
   setupTabs();
+  setupCollapsibleBlocks();
   renderChartControls();
   setupTableHeaderHover();
   setupCurrencyToggle();

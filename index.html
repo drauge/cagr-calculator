@@ -129,17 +129,23 @@
 </p>
 
 <h4>Box 1 tax / mortgage deduction schedule</h4>
-<div class="section-head"><p class="note">Rates are decimal percentages. Deduction cap limits mortgage-interest deduction in the top bracket.</p><button id="addNlBox1RateRow" type="button">Add Box 1 rate row</button></div>
-<div class="table-wrap"><table id="nlBox1RateTable"><thead><tr><th>Year</th><th>Bracket 1 up to (EUR)</th><th>Rate 1 (%)</th><th>Bracket 2 up to (EUR)</th><th>Rate 2 (%)</th><th>Top rate (%)</th><th>Deduction cap (%)</th><th></th></tr></thead><tbody></tbody></table></div>
+<div class="section-head">
+  <p class="note">Rates are decimal percentages. Deduction cap limits mortgage-interest deduction in the top bracket.</p>
+  <div class="button-row"><button class="collapse-toggle" type="button" data-target="nlBox1ScheduleBody">Collapse</button><button id="addNlBox1RateRow" type="button">Add Box 1 rate row</button></div>
+</div>
+<div id="nlBox1ScheduleBody" class="collapsible-block"><div class="table-wrap"><table id="nlBox1RateTable"><thead><tr><th>Year</th><th>Bracket 1 up to (EUR)</th><th>Rate 1 (%)</th><th>Bracket 2 up to (EUR)</th><th>Rate 2 (%)</th><th>Top rate (%)</th><th>Deduction cap (%)</th><th></th></tr></thead><tbody></tbody></table></div></div>
 
 <h4>Eigenwoningforfait / WOZ schedule</h4>
-<div class="section-head"><p class="note">WOZ value is used for eigenwoningforfait. Add future rows if thresholds, rates, or WOZ values change.</p><button id="addNlEwfRow" type="button">Add EWF row</button></div>
-<div class="table-wrap"><table id="nlEwfTable"><thead><tr><th>Year</th><th>WOZ value (EUR)</th><th>Normal rate (%)</th><th>High-value threshold (EUR)</th><th>High-value rate (%)</th><th></th></tr></thead><tbody></tbody></table></div>
+<div class="section-head">
+  <p class="note">WOZ value is used for eigenwoningforfait. Add future rows if thresholds, rates, or WOZ values change.</p>
+  <div class="button-row"><button class="collapse-toggle" type="button" data-target="nlEwfScheduleBody">Collapse</button><button id="addNlEwfRow" type="button">Add EWF row</button></div>
+</div>
+<div id="nlEwfScheduleBody" class="collapsible-block"><div class="table-wrap"><table id="nlEwfTable"><thead><tr><th>Year</th><th>WOZ value (EUR)</th><th>Normal rate (%)</th><th>High-value threshold (EUR)</th><th>High-value rate (%)</th><th></th></tr></thead><tbody></tbody></table></div></div>
 
 <p id="nlMortgageTaxWarning" class="note warning"></p>
 
 <h3>Gross salary + bonus for mortgage deduction</h3>
-<div class="section-head"><p class="note">Used to estimate Box 1 tax benefit from mortgage interest deduction. Add salary and bonus rows over time.</p><button id="addSalaryBonusRow" type="button">Add income row</button></div>
+<div class="section-head"><p class="note">Used to estimate Box 1 tax benefit from mortgage interest deduction. Forecast salary/bonus rows are grown annually by max(0, Personal inflation - 1.1 percentage points), so the default income keeps partial real wage growth below personal inflation.</p><button id="addSalaryBonusRow" type="button">Add income row</button></div>
 <div class="table-wrap"><table id="salaryBonusTable"><thead><tr><th>Amount (EUR)</th><th>Frequency</th><th>Month</th><th>Start year</th><th>End year</th><th>Description</th><th></th></tr></thead><tbody></tbody></table></div>
 
 <h3>Euribor6M schedule</h3>

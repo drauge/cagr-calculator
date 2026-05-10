@@ -164,3 +164,20 @@ body:not(.side-nav-expanded) {
   margin: 32px auto !important;
   max-width: none;
 }
+
+
+.button-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.collapsible-block.collapsed {
+  display: none;
+}
+
+.collapse-toggle {
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+}

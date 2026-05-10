@@ -411,3 +411,26 @@ v33 rebuilds the app tail:
 - initializes default rows correctly
 - reattaches all event listeners
 - keeps the v27 no-navigation layout and requested defaults
+
+
+## v34 changes: Box 1 verification, collapsible schedules, feasibility tolerance
+
+Box 1 / mortgage deduction:
+- Kept the official structure: gross Box 1 income + eigenwoningforfait - deductible mortgage interest.
+- Benefit is calculated as the difference between Box 1 tax before and after the own-home deduction.
+- The high-income mortgage-interest deduction cap is applied to the portion of deduction falling in the top bracket.
+
+UI:
+- Box 1 tax / mortgage deduction schedule is collapsible.
+- Eigenwoningforfait / WOZ schedule is collapsible.
+
+Income forecast:
+- Default gross salary + bonus changed to EUR 118,000.
+- Forecast salary/bonus income is grown by max(0, Personal inflation - 1.1 percentage points).
+
+Feasibility:
+- Liquidity shortfall below EUR 1,000 is treated as conditionally feasible.
+- The shortfall is still shown and included in comments.
+
+Pension:
+- "Sell remaining 2nd property into ETF" now applies to every pension scenario where a 2nd property remains at retirement base year, not just the currently selected pension scenario.
