@@ -110,6 +110,12 @@
 <div class="table-wrap"><table id="secondPropertyTaxTable"><thead><tr><th>Lower limit (€)</th><th>Upper limit (€)</th><th>Rate (%)</th><th></th></tr></thead><tbody></tbody></table></div>
 
 <h3>NL property & mortgage</h3>
+
+<p class="note">
+  <strong>NL acquisition price used</strong> is the price at which the model assumes you buy the NL property in that scenario year. In the current capacity-based model it equals the calculated maximum NL mortgage for that acquisition year.
+  <strong>NL property value</strong> is the later forecast value of that acquired property after appreciation. Therefore acquisition price is an entry price; property value is the forecast market value after ownership.
+</p>
+
 <div class="grid">
 <label>Reference NL property price today (EUR) <input id="amsPrice" type="number" value="650000"/></label>
 <label>NL mortgage / purchase amount (auto = max borrowing capacity) <input id="amsLoan" type="number" value="650000"/></label>
@@ -143,6 +149,14 @@
   <select id="nlUseOfferedRateAsTestRate"><option value="yes" selected>yes, fixed period ≥10y</option><option value="no">no, use 5% test rate</option></select>
 </label>
 </div>
+
+
+<div class="kpis three nl-capacity-kpis">
+<div><span>Selected acquisition year</span><strong id="nlCapacityYear">-</strong></div>
+<div><span>Max NL mortgage at acquisition year</span><strong id="nlCapacityMaxMortgage">-</strong></div>
+<div><span>Reference-price gap</span><strong id="nlCapacityReferenceGap">-</strong></div>
+</div>
+<p id="nlCapacityNote" class="note"></p>
 
 <details class="advanced-block">
 <summary>Advanced: year-specific financing-load overrides</summary>
@@ -360,19 +374,32 @@
 </label>
 </div>
 
-<div class="kpis three">
+<div class="pension-layout">
+<div class="pension-panel">
+<h3>Future nominal EUR</h3>
+<div class="kpis two">
 <div><span>ETF base at retirement base year EOY</span><strong id="pensionEtfBase">-</strong></div>
 <div><span>Annual net ETF income</span><strong id="pensionEtfIncomeAnnual">-</strong></div>
 <div><span>Monthly net pension income</span><strong id="pensionMonthlyFuture">-</strong></div>
-<div><span>Disposable income after gross NL mortgage</span><strong id="pensionDisposableFuture">-</strong></div>
+<div><span>Disposable income after housing cost</span><strong id="pensionDisposableFuture">-</strong></div>
+</div>
+</div>
+
+<div class="pension-panel">
+<h3>Today's EUR</h3>
+<div class="kpis two">
+<div><span>Monthly income in today's EUR</span><strong id="pensionMonthlyToday">-</strong></div>
+<div><span>Disposable income in today's EUR</span><strong id="pensionDisposableToday">-</strong></div>
+<div><span>Inflation factor to retirement</span><strong id="pensionInflationFactor">-</strong></div>
+<div><span>Annual Box 3 tax in retirement</span><strong id="pensionBox3Tax">-</strong></div>
+</div>
+</div>
 </div>
 
 <div class="kpis three">
-<div><span>Monthly income in today's EUR</span><strong id="pensionMonthlyToday">-</strong></div>
-<div><span>Disposable income in today's EUR</span><strong id="pensionDisposableToday">-</strong></div>
 <div><span>2nd sale proceeds added to ETF</span><strong id="pensionLtSaleProceeds">-</strong></div>
-<div><span>Annual Box 3 tax in retirement</span><strong id="pensionBox3Tax">-</strong></div>
-<div><span>Inflation factor to 2054</span><strong id="pensionInflationFactor">-</strong></div>
+<div><span>Housing cost future/month</span><strong id="pensionHousingCostFuture">-</strong></div>
+<div><span>Housing cost today's EUR/month</span><strong id="pensionHousingCostToday">-</strong></div>
 </div>
 
 <p id="pensionNote" class="note"></p>
@@ -392,7 +419,7 @@
 <thead>
 <tr>
 <th>Scenario</th>
-<th>Owns NL property at 2053?</th>
+<th>Owns NL property at retirement base year?</th>
 <th>Monthly net pension income</th>
 <th>Housing cost future/month</th>
 <th>Disposable future/month</th>

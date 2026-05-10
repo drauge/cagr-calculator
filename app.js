@@ -1711,6 +1711,7 @@ function getPensionScenarioMetrics(result, scenarioKey) {
     grossNlMortgageMonthly,
     futureRentMonthly,
     housingCostFutureMonthly,
+    housingCostTodayMonthly: housingCostFutureMonthly / inflationFactor,
     disposableMonthlyFuture,
     disposableMonthlyToday,
     inflationFactor,
@@ -1756,6 +1757,10 @@ function renderPension(result) {
   if (disposableTodayEl) disposableTodayEl.textContent = fmtEUR.format(p.disposableMonthlyToday);
 
   document.getElementById("pensionLtSaleProceeds").textContent = fmtEUR.format(p.ltSaleProceeds);
+  const housingFutureEl = document.getElementById("pensionHousingCostFuture");
+  if (housingFutureEl) housingFutureEl.textContent = fmtEUR.format(p.housingCostFutureMonthly || 0);
+  const housingTodayEl = document.getElementById("pensionHousingCostToday");
+  if (housingTodayEl) housingTodayEl.textContent = fmtEUR.format(p.housingCostTodayMonthly || 0);
   document.getElementById("pensionInflationFactor").textContent = `${p.inflationFactor.toFixed(3)}x`;
 
   document.getElementById("pensionNote").textContent =
@@ -2020,6 +2025,52 @@ function renderDebtAllocationCalculator() {
   document.getElementById("allocTaxBeforeRelief").textContent = fmtEUR.format(result.taxBeforeRelief);
   document.getElementById("allocTreatyRelief").textContent = fmtEUR.format(result.treatyRelief);
   document.getElementById("allocDutchTaxableBase").textContent = fmtEUR.format(result.dutchTaxableBaseAfterDebt);
+}
+
+
+
+function selectedNlAcquisitionScenarioKey() {
+  const pensionScenario = document.getElementById("pensionScenario")?.value || "A";
+  if (pensionScenario === "B") return "B";
+  return "A";
+}
+
+function selectedNlAcquisitionYear(model) {
+  const key = selectedNlAcquisitionScenarioKey();
+  const sc = model.scenarios?.[key];
+
+  if (key === "B") return sc?.purchaseYear || sc?.executionYear || model.projectionStartYear;
+  if (key === "A") {
+    const dyn = sc?.purchaseYear ?? estimateScenarioAPurchaseYear(model);
+    return dyn || sc?.earliestPurchaseYear || model.projectionStartYear;
+  }
+
+  return model.projectionStartYear;
+}
+
+function renderNlCapacityPreview(model) {
+  const yearEl = document.getElementById("nlCapacityYear");
+  const maxEl = document.getElementById("nlCapacityMaxMortgage");
+  const gapEl = document.getElementById("nlCapacityReferenceGap");
+  const noteEl = document.getElementById("nlCapacityNote");
+  if (!yearEl || !maxEl || !gapEl) return;
+
+  const year = selectedNlAcquisitionYear(model);
+  const capacity = calculateNlAcquisitionCapacityForYear(model, year);
+  const referencePrice = nlPurchasePriceForYear(model, year);
+  const gap = Math.max(0, referencePrice - capacity.maxMortgage);
+
+  yearEl.textContent = year || "-";
+  maxEl.textContent = fmtEUR.format(capacity.maxMortgage || 0);
+  gapEl.textContent = fmtEUR.format(gap);
+
+  if (noteEl) {
+    noteEl.textContent =
+      `Capacity preview uses Scenario ${selectedNlAcquisitionScenarioKey()} acquisition year. ` +
+      `Forecast Box 1 income: ${fmtEUR.format(capacity.income || 0)}; ` +
+      `financing-load percentage: ${((capacity.financingLoadPct || 0) * 100).toFixed(2)}%; ` +
+      `test rate: ${((capacity.testRate || 0) * 100).toFixed(2)}%.`;
+  }
 }
 
 

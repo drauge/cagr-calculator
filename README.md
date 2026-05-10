@@ -580,3 +580,19 @@ Checked:
 - no recursive schedule helper loop
 - no duplicate late-execution render call
 - app.js syntax check passes
+
+
+## v44 changes: pension layout and NL capacity explanation
+
+Changed:
+- Pension section now displays Future nominal EUR and Today's EUR side by side.
+- Renamed disposable KPI to "after housing cost" because housing is mortgage for NL-property scenarios and rent for no-NL-property scenarios.
+- Added explicit housing cost future/month and housing cost today's EUR/month.
+- Added explanation of:
+  - NL acquisition price used = entry/acquisition price in the scenario year
+  - NL property value = later forecast market value after appreciation
+- Added explicit max NL mortgage preview for the selected acquisition year, including:
+  - selected acquisition year
+  - max NL mortgage
+  - gap vs reference target price
+  - forecast Box 1 income / financing-load percentage / test rate

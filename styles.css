@@ -200,3 +200,40 @@ body:not(.side-nav-expanded) {
 .advanced-block[open] summary {
   margin-bottom: 10px;
 }
+
+
+.pension-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  margin: 14px 0 16px;
+}
+
+.pension-panel {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  background: var(--soft);
+}
+
+.pension-panel h3 {
+  margin-top: 0;
+}
+
+.kpis.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.nl-capacity-kpis {
+  margin-top: 10px;
+}
+
+@media (max-width: 900px) {
+  .pension-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .kpis.two {
+    grid-template-columns: 1fr;
+  }
+}
