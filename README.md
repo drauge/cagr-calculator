@@ -282,3 +282,29 @@ Scenario calculations now track:
 - Box 3 treaty relief
 - debt allocated to treaty-exempt foreign real estate
 - debt allocated to Dutch taxable assets
+
+
+## v24 fix: scenario-year Box 3 debt allocation
+
+Fixed the Box 3 allocation model.
+
+Problem:
+- v23 added a standalone allocation calculator, but scenario taxes still used a static foreign property tax value.
+- That did not reflect the yearly scenario table.
+
+Now:
+- Every scenario year calculates Box 3 using that year's forecast values:
+  - Dutch investments = ETF value at the tax calculation point
+  - foreign real estate value = forecasted 2nd-property position
+  - Box 3 debt = remaining 2nd mortgage debt
+- A new input controls the foreign real estate value basis:
+  - 2nd property equity (default, per user request)
+  - 2nd property gross value
+- The yearly details table now shows:
+  - Box 3 foreign real estate value used
+  - exempt debt allocation
+  - Dutch debt allocation
+  - treaty relief
+  - final Box 3 tax
+
+The separate manual debt allocation calculator was replaced by a note, because debt allocation now happens inside every scenario year.

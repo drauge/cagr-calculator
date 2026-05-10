@@ -58,31 +58,17 @@
 <label>Debt allocation method
   <select id="box3DebtAllocationMode"><option value="proportional" selected>proportional to exempt assets</option><option value="full_debt_against_nl">full debt against NL assets</option><option value="no_debt">ignore debt</option></select>
 </label>
+<label>Foreign real estate value basis
+  <select id="box3ForeignRealEstateBasis"><option value="equity" selected>2nd property equity</option><option value="gross_value">2nd property gross value</option></select>
+</label>
 </div>
 <p class="note">Fiscal partner uses 2025 joint Box 3 allowance (EUR 115,368) and joint debt threshold (EUR 7,600), allocated fully to your side.</p>
 
 
-<h3>Box 3 debt allocation calculator</h3>
+<h3>Box 3 debt allocation model</h3>
 <p class="note">
-  Standalone calculator for the proportional treaty-exemption effect. It uses the same category return assumptions as the main model.
+  Box 3 debt allocation is now calculated inside every scenario year. The calculator uses that year's forecasted ETF value as Dutch investments, the forecasted 2nd-property position as foreign treaty-exempt real estate, and the remaining 2nd mortgage as Box 3 debt. See the yearly details table for exempt debt allocation, Dutch debt allocation, treaty relief, and final Box 3 tax.
 </p>
-<div class="grid">
-<label>Dutch bank/savings (€) <input id="allocSavings" type="number" value="0" min="0" step="1000"/></label>
-<label>Dutch investments / ETF (€) <input id="allocInvestments" type="number" value="400000" min="0" step="1000"/></label>
-<label>Foreign real estate value (€) <input id="allocForeignRealEstate" type="number" value="300000" min="0" step="1000"/></label>
-<label>Box 3 debt (€) <input id="allocDebt" type="number" value="240000" min="0" step="1000"/></label>
-</div>
-<div class="kpis three">
-<div><span>Debt allocated to exempt foreign real estate</span><strong id="allocExemptDebt">-</strong></div>
-<div><span>Debt usable against Dutch taxable assets</span><strong id="allocDutchDebt">-</strong></div>
-<div><span>Estimated Box 3 tax after treaty relief</span><strong id="allocBox3Tax">-</strong></div>
-</div>
-<div class="kpis three">
-<div><span>Tax before treaty relief</span><strong id="allocTaxBeforeRelief">-</strong></div>
-<div><span>Treaty relief</span><strong id="allocTreatyRelief">-</strong></div>
-<div><span>Effective Dutch taxable base after allocated debt</span><strong id="allocDutchTaxableBase">-</strong></div>
-</div>
-
 <h3>2nd property abroad & mortgage</h3>
 <div class="grid">
 <label>2nd purchase / tax value (EUR) <input id="ltPropertyValue" type="number" value="204000"/></label>
@@ -271,7 +257,7 @@
 <button class="detail-tab-button" data-detail="D" type="button">Scenario D</button>
 </div>
 <div class="table-wrap result-wrap"><table id="detailsTable">
-<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Box 3 treaty relief</th><th>Box 3 exempt debt allocation</th><th>Box 3 Dutch debt allocation</th><th>2nd property taxable value</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
+<thead><tr><th>Year</th><th>ETF EOY</th><th>2nd property value</th><th>2nd mortgage debt</th><th>2nd property equity</th><th>NL property value</th><th>NL mortgage debt</th><th>NL property equity</th><th>Total net worth</th><th>Real net worth</th><th>Box 3 tax</th><th>Box 3 treaty relief</th><th>Box 3 foreign real estate value</th><th>Box 3 exempt debt allocation</th><th>Box 3 Dutch debt allocation</th><th>2nd property taxable value</th><th>2nd property tax</th><th>Events</th></tr></thead><tbody></tbody>
 </table></div>
 </section>
 
